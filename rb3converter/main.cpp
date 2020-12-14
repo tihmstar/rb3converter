@@ -17,6 +17,7 @@ int main(int argc, const char * argv[]) {
 
     printf("got cryptversion=0x%X\n",cm.cryptversion());
     
+    cm.convertToPS3("/tmp/kk/myconvert.mogg");
     
     printf("done\n");
     return 0;
