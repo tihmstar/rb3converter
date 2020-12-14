@@ -11,6 +11,7 @@
 		877B3AA225878A6100852CD3 /* ConvertMogg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AA025878A6100852CD3 /* ConvertMogg.cpp */; };
 		877B3AA825878CBB00852CD3 /* libgeneral.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */; };
 		877B3AA925878CBB00852CD3 /* libgeneral.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AAB2587967B00852CD3 /* ConvertMid.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,6 +43,8 @@
 		877B3AA025878A6100852CD3 /* ConvertMogg.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertMogg.cpp; sourceTree = "<group>"; };
 		877B3AA125878A6100852CD3 /* ConvertMogg.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConvertMogg.hpp; sourceTree = "<group>"; };
 		877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgeneral.0.dylib; path = ../../../../usr/local/lib/libgeneral.0.dylib; sourceTree = "<group>"; };
+		877B3AAB2587967B00852CD3 /* ConvertMid.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertMid.cpp; sourceTree = "<group>"; };
+		877B3AAC2587967B00852CD3 /* ConvertMid.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConvertMid.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +81,8 @@
 			children = (
 				877B3AA125878A6100852CD3 /* ConvertMogg.hpp */,
 				877B3AA025878A6100852CD3 /* ConvertMogg.cpp */,
+				877B3AAC2587967B00852CD3 /* ConvertMid.hpp */,
+				877B3AAB2587967B00852CD3 /* ConvertMid.cpp */,
 				877B3A98258789F000852CD3 /* main.cpp */,
 			);
 			path = rb3converter;
@@ -150,6 +155,7 @@
 			files = (
 				877B3A99258789F000852CD3 /* main.cpp in Sources */,
 				877B3AA225878A6100852CD3 /* ConvertMogg.cpp in Sources */,
+				877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

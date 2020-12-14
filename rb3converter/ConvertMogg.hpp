@@ -33,9 +33,7 @@ public:
     ConvertMogg(std::string inpath);
     ~ConvertMogg();
     
-    const CryptVersion cryptversion();
-    
-    
+    const CryptVersion cryptversion();    
 };
 
 #endif /* ConvertMogg_hpp */
