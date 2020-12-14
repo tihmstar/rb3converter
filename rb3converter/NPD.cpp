@@ -92,3 +92,29 @@ void NPD::createNPDHash2(uint8_t *klicensee, uint8_t* npd_bytes, uint8_t* hash) 
     CMAC_CTX_free(ctx);
     assure(mactlen == 16);
 }
+
+NPD NPD::writeValidNPD(std::string filename, uint8_t* devKLic, uint8_t* rawnpd, uint8_t* contentID, uint8_t flags) {
+    rawnpd[0] = 78;
+    rawnpd[1] = 80;
+    rawnpd[2] = 68;
+    rawnpd[3] = 0;
+    rawnpd[4] = 0;
+    rawnpd[5] = 0;
+    rawnpd[6] = 0;
+    rawnpd[7] = 2;
+    rawnpd[8] = 0;
+    rawnpd[9] = 0;
+    rawnpd[10] = 0;
+    rawnpd[11] = 3;
+    rawnpd[12] = 0;
+    rawnpd[13] = 0;
+    rawnpd[14] = 0;
+    rawnpd[15] = 0;
+    memcpy(rawnpd+16, contentID, 36);
+    memcpy(rawnpd+64, "TimeToDrinkVodka", 16);
+    createNPDHash1(filename, rawnpd, rawnpd+80);
+    createNPDHash2(devKLic, rawnpd, rawnpd+96);
+    bzero(rawnpd+112, 16);
+
+    return createNPD(rawnpd);
+}

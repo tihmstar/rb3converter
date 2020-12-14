@@ -27,6 +27,7 @@ public:
     static NPD createNPD(uint8_t* bytes);
     static void createNPDHash1(std::string filename, uint8_t* npd_bytes, uint8_t* hash);
     static void createNPDHash2(uint8_t *klicensee, uint8_t* npd_bytes, uint8_t* hash);
+    static NPD writeValidNPD(std::string filename, uint8_t* devKLic, uint8_t* rawnpd, uint8_t* contentID, uint8_t flags);
     bool validate();
 };
 
