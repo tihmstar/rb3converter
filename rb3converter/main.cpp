@@ -7,15 +7,14 @@
 
 #include <iostream>
 #include "ConvertMogg.hpp"
+#include "ConvertPNG.hpp"
 
 int main(int argc, const char * argv[]) {
     printf("start\n");
 
-    ConvertMogg cm("/Users/tihmstar/Desktop/rb3/unpacked/songs/rhythmoflove1xx/rhythmoflove1xx.mogg");
+    ConvertPNG cm("/Users/tihmstar/Desktop/rb3/unpacked/songs/rhythmoflove1xx/gen/rhythmoflove1xx_keep.png_xbox");
 
-    printf("got cryptversion=0x%X\n",cm.cryptversion());
-    
-    cm.convertToPS3("/tmp/kk/myconvert.mogg");
+    cm.convertToPS3("/tmp/kk/ps3.png");
     
     printf("done\n");
     return 0;

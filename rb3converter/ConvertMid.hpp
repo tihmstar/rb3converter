@@ -8,11 +8,9 @@
 #ifndef ConvertMid_hpp
 #define ConvertMid_hpp
 
-#include <iostream>
-#include <unistd.h>
-#include <stdint.h>
+#include "FileLoader.hpp"
 
-class ConvertMid {
+class ConvertMid : public FileLoader {
 public:
     enum Region{
         Region_undefind = 0,
@@ -26,9 +24,6 @@ public:
         Edat_type_3
     };
 private:
-    int _fd;
-    uint8_t *_mem;
-    size_t _memSize;
     Region _region;
 public:
     ConvertMid(std::string inpath, Region region = Region::Region_PAL, Edat_type edattype = Edat_type::Edat_type_1);
