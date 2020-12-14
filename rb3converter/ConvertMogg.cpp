@@ -29,14 +29,8 @@ static uint8_t k[16] = {
 };
 
 ConvertMogg::ConvertMogg(std::string inpath)
-: _fd(-1), _mem(NULL), _memSize(0), _ctx(NULL)
+: FileLoader(inpath), _ctx(NULL)
 {
-    struct stat st = {};
-    assure((_fd = open(inpath.c_str(), O_RDONLY)) != -1);
-    assure(!fstat(_fd, &st));
-    _memSize = st.st_size;
-    assure((_mem = (uint8_t*)mmap(NULL, _memSize, PROT_READ, MAP_PRIVATE, _fd, 0)) != (uint8_t*)-1);
-        
     assure(_ctx = EVP_CIPHER_CTX_new());
     assure(EVP_EncryptInit_ex(_ctx, EVP_aes_128_ecb(), NULL, k, NULL) == 1);
 
@@ -47,12 +41,6 @@ ConvertMogg::ConvertMogg(std::string inpath)
 
 ConvertMogg::~ConvertMogg(){
     safeFreeCustom(_ctx, EVP_CIPHER_CTX_free);
-    if (_mem) {
-        munmap(_mem, _memSize);
-    }
-    if (_fd != -1){
-        close(_fd);
-    }
 }
 
 void ConvertMogg::encryptBodyBlock(const void *dst, const void *src){

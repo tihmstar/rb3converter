@@ -14,6 +14,8 @@
 		877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AAB2587967B00852CD3 /* ConvertMid.cpp */; };
 		877B3AAF2587B67100852CD3 /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */; };
 		877B3AB02587B67100852CD3 /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		877B3AB32587C85600852CD3 /* ConvertPNG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB12587C85600852CD3 /* ConvertPNG.cpp */; };
+		877B3AB62587C86C00852CD3 /* FileLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB42587C86C00852CD3 /* FileLoader.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,6 +51,10 @@
 		877B3AAB2587967B00852CD3 /* ConvertMid.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertMid.cpp; sourceTree = "<group>"; };
 		877B3AAC2587967B00852CD3 /* ConvertMid.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConvertMid.hpp; sourceTree = "<group>"; };
 		877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1h/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
+		877B3AB12587C85600852CD3 /* ConvertPNG.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertPNG.cpp; sourceTree = "<group>"; };
+		877B3AB22587C85600852CD3 /* ConvertPNG.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConvertPNG.hpp; sourceTree = "<group>"; };
+		877B3AB42587C86C00852CD3 /* FileLoader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FileLoader.cpp; sourceTree = "<group>"; };
+		877B3AB52587C86C00852CD3 /* FileLoader.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = FileLoader.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,10 +90,14 @@
 		877B3A97258789EF00852CD3 /* rb3converter */ = {
 			isa = PBXGroup;
 			children = (
+				877B3AB52587C86C00852CD3 /* FileLoader.hpp */,
+				877B3AB42587C86C00852CD3 /* FileLoader.cpp */,
 				877B3AA125878A6100852CD3 /* ConvertMogg.hpp */,
 				877B3AA025878A6100852CD3 /* ConvertMogg.cpp */,
 				877B3AAC2587967B00852CD3 /* ConvertMid.hpp */,
 				877B3AAB2587967B00852CD3 /* ConvertMid.cpp */,
+				877B3AB22587C85600852CD3 /* ConvertPNG.hpp */,
+				877B3AB12587C85600852CD3 /* ConvertPNG.cpp */,
 				877B3A98258789F000852CD3 /* main.cpp */,
 			);
 			path = rb3converter;
@@ -161,7 +171,9 @@
 			files = (
 				877B3A99258789F000852CD3 /* main.cpp in Sources */,
 				877B3AA225878A6100852CD3 /* ConvertMogg.cpp in Sources */,
+				877B3AB32587C85600852CD3 /* ConvertPNG.cpp in Sources */,
 				877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */,
+				877B3AB62587C86C00852CD3 /* FileLoader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

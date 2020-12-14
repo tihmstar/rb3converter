@@ -8,13 +8,11 @@
 #ifndef ConvertMogg_hpp
 #define ConvertMogg_hpp
 
-#include <iostream>
-#include <unistd.h>
-#include <stdint.h>
+#include "FileLoader.hpp"
 #include <vector>
 #include <openssl/evp.h>
 
-class ConvertMogg {
+class ConvertMogg : public FileLoader  {
 public:
     enum CryptVersion{
         unknown = 0,
@@ -32,9 +30,6 @@ public:
     };
     
 private:
-    int _fd;
-    uint8_t *_mem;
-    size_t _memSize;
     EVP_CIPHER_CTX *_ctx;
 
     std::vector<uint8_t> _streamP;

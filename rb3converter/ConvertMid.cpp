@@ -42,14 +42,8 @@ void hexstringToBytes(const char* string, uint8_t* bytes, size_t numberofbytes) 
 }
 
 ConvertMid::ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region, Edat_type edattype)
-: _fd(-1),_mem(NULL),_memSize(0), _region(region)
+: FileLoader(inpath), _region(region)
 {
-    struct stat st = {};
-    assure((_fd = open(inpath.c_str(), O_RDONLY)) != -1);
-    assure(!fstat(_fd, &st));
-    _memSize = st.st_size;
-    assure((_mem = (uint8_t*)mmap(NULL, _memSize, PROT_READ, MAP_PRIVATE, _fd, 0)) != (uint8_t*)-1);
-
     readKLIC(klicpath);
     readRapKey(rappath);
 }
