@@ -12,6 +12,8 @@
 		877B3AA825878CBB00852CD3 /* libgeneral.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */; };
 		877B3AA925878CBB00852CD3 /* libgeneral.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AAB2587967B00852CD3 /* ConvertMid.cpp */; };
+		877B3AAF2587B67100852CD3 /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */; };
+		877B3AB02587B67100852CD3 /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +33,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				877B3AA925878CBB00852CD3 /* libgeneral.0.dylib in Embed Libraries */,
+				877B3AB02587B67100852CD3 /* libcrypto.1.1.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -45,6 +48,7 @@
 		877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgeneral.0.dylib; path = ../../../../usr/local/lib/libgeneral.0.dylib; sourceTree = "<group>"; };
 		877B3AAB2587967B00852CD3 /* ConvertMid.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertMid.cpp; sourceTree = "<group>"; };
 		877B3AAC2587967B00852CD3 /* ConvertMid.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ConvertMid.hpp; sourceTree = "<group>"; };
+		877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1h/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +57,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				877B3AA825878CBB00852CD3 /* libgeneral.0.dylib in Frameworks */,
+				877B3AAF2587B67100852CD3 /* libcrypto.1.1.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,6 +96,7 @@
 		877B3AA625878CBB00852CD3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */,
 				877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */,
 			);
 			name = Frameworks;
@@ -277,8 +283,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = /usr/local/include;
-				LIBRARY_SEARCH_PATHS = /usr/local/lib;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/Cellar/openssl@1.1/1.1.1h/include",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
+					"/usr/local/Cellar/openssl@1.1/1.1.1h/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -287,8 +299,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = /usr/local/include;
-				LIBRARY_SEARCH_PATHS = /usr/local/lib;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					"/usr/local/Cellar/openssl@1.1/1.1.1h/include",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
+					"/usr/local/Cellar/openssl@1.1/1.1.1h/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
