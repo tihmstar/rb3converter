@@ -17,6 +17,7 @@
 		877B3AB92587CD0000852CD3 /* NPD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB72587CD0000852CD3 /* NPD.cpp */; };
 		87988E84259CA21500CCB896 /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */; };
 		87988E85259CA21500CCB896 /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		87988E88259CA44400CCB896 /* STFS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87988E86259CA44400CCB896 /* STFS.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -59,6 +60,8 @@
 		877B3AB72587CD0000852CD3 /* NPD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NPD.cpp; sourceTree = "<group>"; };
 		877B3AB82587CD0000852CD3 /* NPD.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NPD.hpp; sourceTree = "<group>"; };
 		87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1i/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
+		87988E86259CA44400CCB896 /* STFS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = STFS.cpp; sourceTree = "<group>"; };
+		87988E87259CA44400CCB896 /* STFS.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = STFS.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +107,8 @@
 				877B3AAB2587967B00852CD3 /* ConvertMid.cpp */,
 				877B3AB22587C85600852CD3 /* ConvertPNG.hpp */,
 				877B3AB12587C85600852CD3 /* ConvertPNG.cpp */,
+				87988E87259CA44400CCB896 /* STFS.hpp */,
+				87988E86259CA44400CCB896 /* STFS.cpp */,
 				877B3A98258789F000852CD3 /* main.cpp */,
 			);
 			path = rb3converter;
@@ -180,6 +185,7 @@
 				877B3A99258789F000852CD3 /* main.cpp in Sources */,
 				877B3AA225878A6100852CD3 /* ConvertMogg.cpp in Sources */,
 				877B3AB32587C85600852CD3 /* ConvertPNG.cpp in Sources */,
+				87988E88259CA44400CCB896 /* STFS.cpp in Sources */,
 				877B3AAD2587967B00852CD3 /* ConvertMid.cpp in Sources */,
 				877B3AB62587C86C00852CD3 /* FileLoader.cpp in Sources */,
 			);
