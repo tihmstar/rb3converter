@@ -8,6 +8,8 @@
 #include "STFS.hpp"
 #include <libgeneral/macros.h>
 #include <sys/stat.h>
+#include <cstring>
+#include <arpa/inet.h>
 
 #define BLOCKSIZE 0x1000
 
