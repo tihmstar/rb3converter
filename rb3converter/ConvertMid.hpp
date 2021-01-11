@@ -9,6 +9,7 @@
 #define ConvertMid_hpp
 
 #include "FileLoader.hpp"
+#include "NPD.hpp"
 
 class ConvertMid : public FileLoader {
 public:
@@ -26,11 +27,12 @@ public:
 private:
     Region _region;
     std::string _contentId;
-    uint8_t _key[16];
-    uint8_t _rapKey[16];
+    uint8_t _key[16] = {0};
+    uint8_t _rapKey[16] = {0};
     void readKLIC(std::string inpath);
     void readRapKey(std::string inpath);
-    void createEdat1(std::string outpath);
+    void createEdat1(const std::string& outpath);
+    static void calculateBlockKeyEdat1(int blk, NPD npd, uint8_t *keyBuffer);
 
 public:
     ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region = Region::Region_PAL, Edat_type edattype = Edat_type::Edat_type_1);
