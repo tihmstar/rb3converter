@@ -11,6 +11,8 @@
 #include <iostream>
 #include "FileLoader.hpp"
 #include <stdint.h>
+#include <vector>
+#include <map>
 
 #define ATTRIBUTE_PACKED __attribute__ ((packed))
 
@@ -28,6 +30,17 @@ class STFS : public FileLoader{
     enum Descriptor_type_t : int32_t{
         Descriptor_type_STFS = 0,
         Descriptor_type_SVOD = 1
+    };
+    
+    enum HashTableStatus : uint8_t{
+        HashTableStatus_unused          = 0x00,
+        HashTableStatus_free            = 0x40,
+        HashTableStatus_used            = 0x80,
+        HashTableStatus_newly_allocated = 0xC0
+    };
+    enum filetype : uint8_t {
+        type_file = 0,
+        type_directory = 0x80,
     };
     
     struct ATTRIBUTE_PACKED CON_header{
@@ -143,6 +156,24 @@ class STFS : public FileLoader{
             metadata_v2 v2;
         };
     };
+    struct ATTRIBUTE_PACKED hashTableEntry{
+        uint8_t hash[0x14];
+        enum HashTableStatus status;
+        uint8_t nextBlock[3];
+    };
+    struct ATTRIBUTE_PACKED fileRecord{
+        char filename[0x28];
+        uint8_t type;
+        uint8_t numblocks[3];
+        uint8_t _unknown[3];
+        uint8_t firstblock[3];
+        int16_t pathindex;
+        uint32_t size;
+        uint16_t udate;
+        uint16_t utime;
+        uint16_t adate;
+        uint16_t atime;
+    };
     
 private:
     const header *_head;
@@ -150,9 +181,20 @@ private:
 
     uint32_t _block_number;
     uint16_t _block_count;
+    std::map<std::string,const fileRecord *> _files;
+
+    const uint8_t *getblock(uint16_t blocknum);
+    const hashTableEntry *gethashtable(uint16_t blocknum);
+    void parseFiletable(uint32_t startBlock, uint32_t numBlocks);
+    
+    std::vector<uint8_t> getFile(const fileRecord *file);
+    
 public:
     STFS(std::string inpath);
     ~STFS();
+    
+    void extract_all(std::string outputPath);
+    
 };
 
 #endif /* STFS_hpp */
