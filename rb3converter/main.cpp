@@ -18,6 +18,8 @@ int main(int argc, const char * argv[]) {
 
     STFS xboxfs("/Users/tihmstar/Desktop/rb3/rhythmoflove1xx.con");
     
+    xboxfs.extract_all(".");
+    
     
     ConvertMid cm("/Users/tihmstar/Desktop/rb3/unpacked/songs/rhythmoflove1xx/rhythmoflove1xx.mid", "/Users/tihmstar/Desktop/C3CONToolsv401/bin/klic.txt", "/Users/tihmstar/Desktop/C3CONToolsv401/bin/raps/ntsc.rap", ConvertMid::Region_NTSC, ConvertMid::Edat_type_1);
 
