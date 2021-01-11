@@ -41,6 +41,10 @@ class dtaParser : FileLoader{
 public:
     dtaParser(std::string inpath);
     ~dtaParser();
+    
+    size_t getSongsCnt();
+    
+    std::string getSongIDForSong(uint32_t songnum);
 };
 
 #endif /* dtaParser_hpp */

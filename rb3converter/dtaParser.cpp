@@ -197,3 +197,29 @@ end:
     return ret;
 }
 
+
+size_t dtaParser::getSongsCnt(){
+    return _roots.size();
+}
+
+std::string dtaParser::getSongIDForSong(uint32_t songnum){
+    dtaObject &song = _roots.at(songnum);
+    assure(song.type == dtaObject::type_children);
+
+    for (auto &child : song.children) {
+        if (child.keys.size()) {
+            std::string &key = child.keys.at(0);
+            if (key == "song_id") {
+                if (child.intValues.size()) {
+                    return std::to_string(child.intValues.at(0));
+                }else if (child.strValue.size()){
+                    return child.strValue;
+                }else{
+                    reterror("error reading song_id");
+                }
+            }
+        }
+    }
+    
+    reterror("failed to get song_id");
+}
