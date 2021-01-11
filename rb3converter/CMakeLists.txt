@@ -12,6 +12,12 @@ add_executable(rb3converter
         ConvertMid.hpp
         ConvertMogg.cpp
         ConvertMogg.hpp
+        ConvertPNG.cpp
+        ConvertPNG.hpp
+        FileLoader.cpp
+        FileLoader.hpp
+        STFS.cpp
+        STFS.hpp
         main.cpp NPD.cpp NPD.hpp)
 
 link_directories(rb3converter /usr/local/lib)

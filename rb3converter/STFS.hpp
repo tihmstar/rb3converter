@@ -95,7 +95,7 @@ class STFS : public FileLoader{
         uint8_t Padding[5];
     };
     
-    struct ATTRIBUTE_PACKED Volume_Descriptor{
+    struct ATTRIBUTE_PACKED Volume_Descriptor_t{
         union{
             Volume_Descriptor_STFS STFS;
             Volume_Descriptor_SVOD SVOD;
@@ -146,7 +146,7 @@ class STFS : public FileLoader{
         uint32_t Save_Game_ID;
         uint8_t Console_ID[5];
         uint8_t Profile_ID[8];
-        Volume_Descriptor Volume_Descriptor;
+        Volume_Descriptor_t Volume_Descriptor;
         int32_t Data_File_Count;
         int64_t Data_File_Combined_Size;
         Descriptor_type_t Descriptor_type;
