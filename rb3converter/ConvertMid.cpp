@@ -6,6 +6,7 @@
 //
 
 #include "ConvertMid.hpp"
+#include "NPD.hpp"
 #include <fcntl.h>
 #include <unistd.h>
 #include <libgeneral/macros.h>
@@ -18,6 +19,45 @@
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <filesystem>
+
+#define NPD_SIZE (128)
+#define EDAT_BLOCKSIZE (16384)
+#define FLAG_SDAT (16777216)
+
+static const uint8_t SDATKEY[17] = "\x0d\x65\x5e\xf8\xe6\x74\xa9\x8a\xb8\x50\x5c\xfa\x7d\x01\x29\x33";
+
+struct EDATData {
+    uint32_t flags;
+    uint32_t blockSize;
+    uint64_t fileLen;
+    static EDATData createEDATData(uint8_t* data, size_t len) {
+        // TODO: test if byteswap is necessary
+        assure(len >= 16);
+        EDATData edatData = {
+                ((uint32_t*)data)[0],
+                ((uint32_t*)data)[1],
+                ((uint64_t *)data)[1],
+        };
+        return edatData;
+
+    }
+};
+
+uint64_t swapByteOrder64(uint64_t in) {
+#if __has_builtin(__builtin_bswap64)
+    return __builtin_bswap64(in);
+#else
+    return ((((in) & 0xff00000000000000ull) >> 56)                                      \
+      | (((in) & 0x00ff000000000000ull) >> 40)                                      \
+      | (((in) & 0x0000ff0000000000ull) >> 24)                                      \
+      | (((in) & 0x000000ff00000000ull) >> 8)                                      \
+      | (((in) & 0x00000000ff000000ull) << 8)                                      \
+      | (((in) & 0x0000000000ff0000ull) << 24)                                      \
+      | (((in) & 0x000000000000ff00ull) << 40)                                      \
+      | (((in) & 0x00000000000000ffull) << 56))
+#endif
+}
 
 uint8_t hexNibbleToInt(char nibble) {
     if (nibble >= '0' && nibble <= '9') {
@@ -54,7 +94,6 @@ ConvertMid::~ConvertMid(){
 
 void ConvertMid::readKLIC(std::string inpath){
     std::string line;
-    std::string contentid;
     std::string keyString;
     std::ifstream _is (inpath, std::ifstream::binary);
     std::getline(_is, line);
@@ -67,7 +106,7 @@ void ConvertMid::readKLIC(std::string inpath){
         std::getline(_is, line);
         std::getline(_is, line);
     }
-    std::getline(_is, contentid);
+    std::getline(_is, _contentId);
     std::getline(_is, line);
     std::getline(_is, keyString);
     hexstringToBytes(keyString.c_str(), _key, 16);
@@ -133,4 +172,55 @@ void ConvertMid::readRapKey(std::string inpath){
             _rapKey[num6] = b - key2[num6];
         }
     }
+}
+
+void ConvertMid::createEdat1(std::string outpath) {
+    uint8_t *npdBuffer = NULL;
+    uint8_t *encryptedData = NULL;
+    uint8_t *renameMe = NULL;
+    uint8_t edatBlock[EDAT_BLOCKSIZE];
+    cleanup([&]{
+        safeFree(npdBuffer);
+        safeFree(encryptedData);
+        safeFree(renameMe);
+    });
+
+    size_t blockCount = (_memSize + EDAT_BLOCKSIZE - 1) / EDAT_BLOCKSIZE;
+    npdBuffer = (uint8_t*)malloc(NPD_SIZE); // this is dirty but a valid NPD seems to have a fixed size
+    encryptedData = (uint8_t*)malloc(blockCount * EDAT_BLOCKSIZE);
+    renameMe = (uint8_t*)malloc(_memSize + 15);
+    std::ofstream outfile (outpath, std::ofstream::binary);
+    NPD dummyNPD = NPD::writeValidNPD(std::filesystem::path(outpath).filename(), _key, npdBuffer, (uint8_t*)_contentId.c_str(), 0x00);
+    assure(dummyNPD.validate());
+    outfile.write((char*)npdBuffer, NPD_SIZE);
+    outfile.write("\x00\x00\x00\x00", 4);
+    outfile.write("\x00\x00\x40\x00", 4);
+    uint64_t bswappedFileSize = swapByteOrder64(_memSize);
+    outfile.write((char*)&bswappedFileSize, 8);
+    outfile.seekp(256); // the data seems to be padded to 256 bytes
+    EDATData edatData = {0, EDAT_BLOCKSIZE, _memSize};
+
+    // derive encryption key
+    uint8_t encryptionKey[16] = {0};
+    if(edatData.flags & FLAG_SDAT) {
+        for (int i = 0; i < 16; ++i) {
+            encryptionKey[i] = dummyNPD.devHash[i] ^ SDATKEY[i];
+        }
+    } else if(dummyNPD.license == 3) {
+        memcpy(encryptionKey, _key, 16);
+    } else if(dummyNPD.license == 2) {
+        memcpy(encryptionKey, _rapKey, 16);
+    } else {
+        // there is no valid encryption key available
+        assure(0);
+    }
+
+    // this is where the real encryption is performed (compare with EDAT.cs -> encryptData(...))
+    for (int i = 0; i < blockCount; ++i) {
+        size_t block_offset = i * EDAT_BLOCKSIZE;
+        size_t plaintextBytesForThisBlock = (i != (blockCount-1)) ? EDAT_BLOCKSIZE : _memSize % EDAT_BLOCKSIZE;
+        size_t readSize = (plaintextBytesForThisBlock + 15) & 0xfffffffffffffff0;
+    }
+
+    outfile.close();
 }

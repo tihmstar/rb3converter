@@ -13,7 +13,7 @@
 class ConvertMid : public FileLoader {
 public:
     enum Region{
-        Region_undefind = 0,
+        Region_undefined = 0,
         Region_PAL,
         Region_NTSC
     };
@@ -30,10 +30,13 @@ private:
     uint8_t _rapKey[16];
     void readKLIC(std::string inpath);
     void readRapKey(std::string inpath);
+    void createEdat1(std::string outpath);
 
 public:
     ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region = Region::Region_PAL, Edat_type edattype = Edat_type::Edat_type_1);
     ~ConvertMid();
+
+    void convertToPS3(std::string outpath);
     
 };
 #endif /* ConvertMid_hpp */
