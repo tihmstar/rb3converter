@@ -110,7 +110,6 @@ void apploaderReverse(uint8_t *input_block, uint8_t *output_block, int input_blo
 }
 
 void apploaderUnencryptedInit(CMAC_CTX *cmac_ctx, uint8_t* hashKey) {
-    cmac_ctx = CMAC_CTX_new();
     assure(CMAC_Init(cmac_ctx, hashKey, 16, EVP_aes_128_cbc(), nullptr) == 1);
 }
 
@@ -126,7 +125,7 @@ void apploaderUnencryptedFinal(CMAC_CTX *cmac_ctx, uint8_t* hashOutput) {
 }
 
 void apploaderUnencrypted(uint8_t* data, size_t len, uint8_t* hashKey, uint8_t* hashOutput) {
-    CMAC_CTX *cmac_ctx = nullptr;
+    CMAC_CTX *cmac_ctx = CMAC_CTX_new();
     apploaderUnencryptedInit(cmac_ctx, hashKey);
     apploaderUnencryptedUpdate(cmac_ctx, data, len);
     apploaderUnencryptedFinal(cmac_ctx, hashOutput);
@@ -231,7 +230,6 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     uint8_t *encryptedBlocks = nullptr;
     uint8_t inputBlock[EDAT_BLOCKSIZE + 15];
     uint8_t outputBlock[EDAT_BLOCKSIZE + 15];
-    uint8_t edatBlock[EDAT_BLOCKSIZE];
     uint8_t blockKey[20];
     uint8_t encryptedBlockKey[16];
     uint8_t blockCmac[16];
@@ -245,7 +243,7 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     npdBuffer = (uint8_t*)malloc(NPD_SIZE); // this is dirty but a valid NPD seems to have a fixed size
     encryptedBlockCMACs = (uint8_t*)malloc(blockCount * 16);
     encryptedBlocks = (uint8_t*)malloc(_memSize + 15);
-    std::fstream outfile (outpath, std::ios::in | std::ios::out | std::ofstream::binary);
+    std::fstream outfile (outpath, std::ios::in | std::ios::out | std::ofstream::binary |  std::fstream::trunc);
     NPD dummyNPD = NPD::writeValidNPD(std::filesystem::path(outpath).filename(), _key, npdBuffer, (uint8_t*)_contentId.c_str(), 0x00);
     assure(dummyNPD.validate());
     outfile.write((char*)npdBuffer, NPD_SIZE);
@@ -303,7 +301,7 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     outfile.write((char*)encryptedBlocks, _memSize + 15);
 
     // calculate CMAC of encrypted blocks and blockwise CMACS
-    CMAC_CTX *cmac_ctx = nullptr;
+    CMAC_CTX *cmac_ctx = CMAC_CTX_new();
     apploaderUnencryptedInit(cmac_ctx, encryptionKey);
     size_t bytes_read = 0;
     size_t amount_of_blocks = (edatData.fileLen + edatData.blockSize - 11) / edatData.blockSize;
@@ -344,5 +342,9 @@ void ConvertMid::calculateBlockKeyEdat1(int blk, NPD npd, uint8_t *keyBuffer) {
         bzero(keyBuffer, 16);
     }
     ((uint32_t*)keyBuffer)[3] = htonl(blk);
+}
+
+void ConvertMid::convertToPS3(std::string outpath) {
+    createEdat1(outpath);
 }
 
