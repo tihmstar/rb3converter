@@ -23,6 +23,7 @@ public:
         type_keys,
         type_keywords,
         type_children,
+        type_empty,
         type_comment
     } type = type_undefined;
     std::vector<int> intValues;
@@ -38,6 +39,9 @@ class dtaParser : FileLoader{
     
     dtaObject parseElement(const char *buf, size_t size);
     
+    std::string getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noending);
+    std::string getWriteObjData(const dtaObject &obj, int intendlevel, bool noending = false);
+    
 public:
     dtaParser(std::string inpath);
     ~dtaParser();
@@ -45,6 +49,10 @@ public:
     size_t getSongsCnt();
     
     std::string getSongIDForSong(uint32_t songnum);
+    
+    void writeSongToFile(std::string outfile, uint32_t songnum);
+    
+    void writeToFile(std::string outfile);
 };
 
 #endif /* dtaParser_hpp */

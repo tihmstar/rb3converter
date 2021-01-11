@@ -7,6 +7,9 @@
 
 #include "dtaParser.hpp"
 #include <libgeneral/macros.h>
+#include <fcntl.h>
+
+#define INTENDATIONCNT 2
 
 dtaParser::dtaParser(std::string inpath)
 : FileLoader(inpath)
@@ -192,6 +195,16 @@ end:
     if (ret.type == dtaObject::type_undefined && ret.keywords.size()) {
         ret.type = dtaObject::type_keywords;
     }
+    if (ret.type == dtaObject::type_undefined &&
+        ret.keys.size() == 0 &&
+        ret.keywords.size() == 0 &&
+        ret.intValues.size() == 0 &&
+        ret.strValue.size() == 0 &&
+        ret.children.size() == 0 &&
+        ret.comment.size() == 0) {
+        ret.type = dtaObject::type_empty;
+    }
+    assure(ret.type != dtaObject::type_undefined);
     ret.usedSize = origSize-size;
     retassure(didOpen, "invalid object");
     return ret;
@@ -222,4 +235,203 @@ std::string dtaParser::getSongIDForSong(uint32_t songnum){
     }
     
     reterror("failed to get song_id");
+}
+
+
+std::string dtaParser::getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noending){
+    std::string ret;
+    if (!noending) {
+        for (int i = 0; i<intendlevel*INTENDATIONCNT; i++){
+            ret += ' ';
+        }
+    }
+    ret += std::string((unsigned char *)buf,(unsigned char *)buf+bufSize);
+    if (!noending) {
+        ret += "\r\n";
+    }
+    return ret;
+}
+
+std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, bool noending){
+    std::string ret;
+    switch (obj.type) {
+        case dtaObject::type_children:
+        {
+            if (obj.keywords.size() == 0) {
+                ret += getWriteDataIntended("(", 1, intendlevel, noending);
+                if (obj.keys.size() == 1) {
+                    std::string w = '\'' + obj.keys.at(0) + '\'';
+                    ret += getWriteDataIntended(w.data(), w.size(), intendlevel+1, noending);
+                }else if (obj.keys.size() != 0){
+                    reterror("todo");
+                }
+                for (auto child : obj.children){
+                    ret += getWriteObjData(child, intendlevel+1);
+                }
+                ret += getWriteDataIntended(")", 1, intendlevel, noending);
+            }else if (obj.keywords.size() == 1){
+                std::string w;
+                if (obj.children.size() == 1) {
+                    w = getWriteDataIntended("(", 1, intendlevel, true);
+                    w += obj.keywords.at(0);
+                    w += ' ';
+                    w += getWriteObjData(obj.children.at(0), intendlevel, true);
+                    ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+                }else if (obj.children.size() > 1){
+                    std::string w = {'('};
+                    w += obj.keywords.at(0);
+                    for (auto o : obj.children) {
+                        if (w.size() > 1) w += ' ';
+                        w += getWriteObjData(o, intendlevel);
+                    }
+                }
+                w += ')';
+                ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+            }else{
+                reterror("todo");
+            }
+        }
+            break;
+        case dtaObject::type_str:
+        {
+            ret += getWriteDataIntended("(", 1, intendlevel, noending);
+            if (obj.keys.size() == 1) {
+                std::string w = '\'' + obj.keys.at(0) + '\'';
+                ret += getWriteDataIntended(w.data(), w.size(), intendlevel+1, noending);
+            }else if (obj.keywords.size() == 1) {
+                std::string w = obj.keywords.at(0);
+                ret += getWriteDataIntended(w.data(), w.size(), intendlevel+1, noending);
+            }else{
+                reterror("todo");
+            }
+            {
+                std::string w = '\"' + obj.strValue + '\"';
+                ret += getWriteDataIntended(w.data(), w.size(), intendlevel+1, noending);
+            }
+            ret += getWriteDataIntended(")", 1, intendlevel, noending);
+        }
+            break;
+        case dtaObject::type_ints:
+        {
+            std::string w{'('};
+            if (obj.keys.size() == 1) {
+                w += '\'' + obj.keys.at(0) + '\'';
+            }else if (obj.keys.size() != 0){
+                reterror("todo");
+            }else if (obj.keywords.size()){
+                retassure(obj.keywords.size() == 1, "todo");
+                w += obj.keywords.at(0);
+            }
+                            
+            for (auto v : obj.intValues) {
+                if (w.size() > 1) w += ' ';
+                w += std::to_string(v);
+            }
+            w += ')';
+            ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+        }
+            break;
+        case dtaObject::type_floats:
+        {
+            std::string w{'('};
+            if (obj.keys.size() == 1) {
+                w += '\'' + obj.keys.at(0) + '\'';
+            }else if (obj.keys.size() != 0){
+                reterror("todo");
+            }
+            for (auto v : obj.floatValues) {
+                if (w.size() > 1) w += ' ';
+                char buf[0x100];
+                snprintf(buf, sizeof(buf), "%.2f",v);
+                w += buf;
+            }
+            w += ')';
+            ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+        }
+            break;
+        case dtaObject::type_keys:
+        {
+            std::string w{'('};
+            for (auto k : obj.keys) {
+                if (w.size() > 1) w += ' ';
+                w += '\'' + k + '\'';
+            }
+            w += ')';
+            ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+        }
+            break;
+        case dtaObject::type_keywords:
+        {
+            std::string w{'('};
+            for (auto k : obj.keywords) {
+                if (w.size() > 1) w += ' ';
+                w += k;
+            }
+            w += ')';
+            ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
+        }
+            break;
+        case dtaObject::type_comment:
+        {
+            ret += getWriteDataIntended(obj.comment.data(), obj.comment.size(), 0, noending);
+        }
+            break;
+        case dtaObject::type_empty:
+        {
+            ret += getWriteDataIntended("()", 2, intendlevel, noending);
+        }
+            break;
+        default:
+//#warning DEBUG
+//            return ret;
+            reterror("unexpected type");
+    }
+    
+    return ret;
+}
+
+
+void dtaParser::writeSongToFile(std::string outfile, uint32_t songnum){
+    int fd = -1;
+    cleanup([&]{
+        if (fd > 0) {
+            close(fd); fd = -1;
+        }
+    });
+    dtaObject &song = _roots.at(songnum);
+    
+    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0, "failed to create file");
+    std::string w = getWriteObjData(song, 0);
+    write(fd, w.data(), w.size());
+}
+
+
+void dtaParser::writeToFile(std::string outfile){
+    int fd = -1;
+    cleanup([&]{
+        if (fd > 0) {
+            close(fd); fd = -1;
+        }
+    });
+    
+    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0, "failed to create file");
+    
+#ifdef DEBUG
+    int counter = 0;
+#endif
+    
+    for (dtaObject &song : _roots) {
+//#ifdef DEBUG
+//        if (counter == 2){
+//            printf("");
+//        }
+//#endif
+        std::string w = getWriteObjData(song, 0);
+        write(fd, w.data(), w.size());
+#ifdef DEBUG
+        counter++;
+#endif
+    }
+    
+    printf("");
 }
