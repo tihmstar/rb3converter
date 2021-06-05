@@ -84,7 +84,6 @@ void hexstringToBytes(const char* string, uint8_t* bytes, size_t numberofbytes) 
     }
 }
 
-
 void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
     size_t pos = data.find(toSearch);
     while( pos != std::string::npos){
@@ -94,10 +93,14 @@ void findAndReplaceAll(std::string & data, std::string toSearch, std::string rep
 }
 
 void apploaderReverse(uint8_t *input_block, uint8_t *output_block, int input_block_len, uint8_t* key, uint8_t *iv, uint8_t *hashKey, uint8_t *hashOutput) {
+    EVP_CIPHER_CTX *ctx = NULL;
+    cleanup([&]{
+        safeFreeCustom(ctx, EVP_CIPHER_CTX_free);
+    });
+    int ciphertext_len = 0;
+    int len = 0;
+
     // encryption using aes-128-cbc
-    EVP_CIPHER_CTX *ctx;
-    int ciphertext_len;
-    int len;
     assure((ctx = EVP_CIPHER_CTX_new()) != nullptr );
     assure(EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), nullptr, key, iv) == 1);
     assure(EVP_CIPHER_CTX_set_padding(ctx, 0) == 1);
@@ -105,17 +108,22 @@ void apploaderReverse(uint8_t *input_block, uint8_t *output_block, int input_blo
     ciphertext_len = len;
     assure(EVP_EncryptFinal_ex(ctx, output_block + len, &len) == 1);
     ciphertext_len += len;
-    EVP_CIPHER_CTX_free(ctx);
     assure(ciphertext_len == input_block_len);
 
     // hash using CMAC of length 16
-    CMAC_CTX *cmac_ctx = CMAC_CTX_new();
-    size_t mactlen;
-    assure(CMAC_Init(cmac_ctx, hashKey, 16, EVP_aes_128_cbc(), nullptr) == 1);
-    assure(CMAC_Update(cmac_ctx, output_block, ciphertext_len) == 1);
-    assure(CMAC_Final(cmac_ctx, hashOutput, &mactlen) == 1);
-    CMAC_CTX_free(cmac_ctx);
-    assure(mactlen == 16);
+    {
+        CMAC_CTX *cmac_ctx = NULL;
+        cleanup([&]{
+            safeFreeCustom(cmac_ctx, CMAC_CTX_free);
+        });
+        size_t mactlen = 0;
+        
+        assure(cmac_ctx = CMAC_CTX_new());
+        assure(CMAC_Init(cmac_ctx, hashKey, 16, EVP_aes_128_cbc(), nullptr) == 1);
+        assure(CMAC_Update(cmac_ctx, output_block, ciphertext_len) == 1);
+        assure(CMAC_Final(cmac_ctx, hashOutput, &mactlen) == 1);
+        assure(mactlen == 16);
+    }
 }
 
 void apploaderUnencryptedInit(CMAC_CTX *cmac_ctx, uint8_t* hashKey) {
@@ -127,14 +135,17 @@ void apploaderUnencryptedUpdate(CMAC_CTX *cmac_ctx, const uint8_t *data, size_t 
 }
 
 void apploaderUnencryptedFinal(CMAC_CTX *cmac_ctx, uint8_t* hashOutput) {
-    size_t mactlen;
+    size_t mactlen = 0;
     assure(CMAC_Final(cmac_ctx, hashOutput, &mactlen) == 1);
-    CMAC_CTX_free(cmac_ctx);
     assure(mactlen == 16);
 }
 
 void apploaderUnencrypted(uint8_t* data, size_t len, uint8_t* hashKey, uint8_t* hashOutput) {
-    CMAC_CTX *cmac_ctx = CMAC_CTX_new();
+    CMAC_CTX *cmac_ctx = NULL;
+    cleanup([&]{
+        safeFreeCustom(cmac_ctx, CMAC_CTX_free);
+    });
+    assure(cmac_ctx = CMAC_CTX_new());
     apploaderUnencryptedInit(cmac_ctx, hashKey);
     apploaderUnencryptedUpdate(cmac_ctx, data, len);
     apploaderUnencryptedFinal(cmac_ctx, hashOutput);
@@ -204,48 +215,54 @@ void ConvertMid::readRapKey(std::string inpath){
         103, 212, 93, 163, 41, 109, 0, 106, 78, 124, 83, 123, 245, 83, 140, 116
     };
 
+    uint8_t encryptedRapKey[16] = {};
 
-    std::ifstream infile;
-    infile.open(inpath, std::ios::binary | std::ios::in);
-    uint8_t encryptedRapKey[16];
-    infile.read((char*)encryptedRapKey, 16);
-    infile.close();
-    int plaintext_len = 0, len;
-
-    EVP_CIPHER_CTX *ctx;
-    assure((ctx = EVP_CIPHER_CTX_new()) != nullptr);
-    assure(EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, rapKey, nullptr) == 1);
-    assure(EVP_CIPHER_CTX_set_padding(ctx, 0) == 1);
-    assure(EVP_DecryptUpdate(ctx, _rapKey, &len, encryptedRapKey, 16) == 1);
-    plaintext_len = len;
-    assure(EVP_DecryptFinal_ex(ctx, _rapKey + len, &len) == 1);
-    plaintext_len += len;
-    EVP_CIPHER_CTX_free(ctx);
-    assure(plaintext_len == 16);
-
-    for(int i = 0; i < 5; i++) {
-        for(int j = 0; j < 16; j++) {
-            int num = indexTable[j];
-            _rapKey[num] = _rapKey[num] ^ key1[num];
-        }
-        for (int num2 = 15; num2 > 0; num2--)
-        {
-            int num3 = indexTable[num2];
-            int num4 = indexTable[num2 - 1];
-            _rapKey[num3] = _rapKey[num3] ^ _rapKey[num4];
-        }
-        int num5 = 0;
-        for (int k = 0; k < 16; k++)
-        {
-            int num6 = indexTable[k];
-            uint8_t b = _rapKey[num6] = _rapKey[num6] - num5;
-            if (num5 != 1 || b != 0xff)
-            {
-                int num7 = b;
-                int num8 = key2[num6];
-                num5 = (num7 < num8);
+    {
+        std::ifstream infile;
+        infile.open(inpath, std::ios::binary | std::ios::in);
+        infile.read((char*)encryptedRapKey, 16);
+        infile.close();
+    }
+    
+    {
+        EVP_CIPHER_CTX *ctx = NULL;
+        cleanup([&]{
+            safeFreeCustom(ctx, EVP_CIPHER_CTX_free);
+        });
+        int plaintext_len = 0;
+        int len = 0;
+        assure((ctx = EVP_CIPHER_CTX_new()) != nullptr);
+        assure(EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, rapKey, nullptr) == 1);
+        assure(EVP_CIPHER_CTX_set_padding(ctx, 0) == 1);
+        assure(EVP_DecryptUpdate(ctx, _rapKey, &len, encryptedRapKey, 16) == 1);
+        plaintext_len = len;
+        assure(EVP_DecryptFinal_ex(ctx, _rapKey + len, &len) == 1);
+        plaintext_len += len;
+        assure(plaintext_len == 16);
+        for(int i = 0; i < 5; i++) {
+            for(int j = 0; j < 16; j++) {
+                int num = indexTable[j];
+                _rapKey[num] = _rapKey[num] ^ key1[num];
             }
-            _rapKey[num6] = b - key2[num6];
+            for (int num2 = 15; num2 > 0; num2--)
+            {
+                int num3 = indexTable[num2];
+                int num4 = indexTable[num2 - 1];
+                _rapKey[num3] = _rapKey[num3] ^ _rapKey[num4];
+            }
+            int num5 = 0;
+            for (int k = 0; k < 16; k++)
+            {
+                int num6 = indexTable[k];
+                uint8_t b = _rapKey[num6] = _rapKey[num6] - num5;
+                if (num5 != 1 || b != 0xff)
+                {
+                    int num7 = b;
+                    int num8 = key2[num6];
+                    num5 = (num7 < num8);
+                }
+                _rapKey[num6] = b - key2[num6];
+            }
         }
     }
 }
@@ -259,13 +276,10 @@ void ConvertMid::createEdat1(const std::string& outpath) {
         safeFree(encryptedBlockCMACs);
         safeFree(encryptedBlocks);
     });
-    uint8_t inputBlock[EDAT_BLOCKSIZE + 15] = {};
-    uint8_t outputBlock[EDAT_BLOCKSIZE + 15] = {};
-    uint8_t blockKey[20] = {};
-    uint8_t encryptedBlockKey[16] = {};
-    uint8_t blockCmac[16] = {};
-
+    uint8_t encryptionKey[16] = {0};
     size_t blockCount = (_memSize + EDAT_BLOCKSIZE - 1) / EDAT_BLOCKSIZE;
+    EDATData edatData = {0, EDAT_BLOCKSIZE, _memSize};
+
     npdBuffer = (uint8_t*)malloc(NPD_SIZE); // this is dirty but a valid NPD seems to have a fixed size
     memset(npdBuffer, 0, NPD_SIZE);
 
@@ -274,17 +288,19 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     
     std::fstream outfile (outpath, std::ios::in | std::ios::out | std::ofstream::binary |  std::fstream::trunc);
     NPD dummyNPD = NPD::writeValidNPD(std::filesystem::path(outpath).filename(), _key, npdBuffer, _contentId, 0x00);
+    
     assure(dummyNPD.validate());
+    
     outfile.write((char*)npdBuffer, NPD_SIZE);
     outfile.write("\x00\x00\x00\x00", 4);
     outfile.write("\x00\x00\x40\x00", 4);
-    uint64_t bswappedFileSize = swapByteOrder64(_memSize);
-    outfile.write((char*)&bswappedFileSize, 8);
+    {
+        uint64_t bswappedFileSize = swapByteOrder64(_memSize);
+        outfile.write((char*)&bswappedFileSize, 8);
+    }
     outfile.seekp(EDAT_DATA_START); // the data seems to be padded to 256 bytes
-    EDATData edatData = {0, EDAT_BLOCKSIZE, _memSize};
 
     // derive encryption key
-    uint8_t encryptionKey[16] = {0};
     if(edatData.flags & FLAG_SDAT) {
         for (int i = 0; i < 16; ++i) {
             encryptionKey[i] = dummyNPD.devHash[i] ^ SDATKEY[i];
@@ -300,27 +316,39 @@ void ConvertMid::createEdat1(const std::string& outpath) {
 
     // this is where the real encryption is performed (compare with EDAT.cs -> encryptData(...))
     for (int i = 0; i < blockCount; ++i) {
+        uint8_t inputBlock[EDAT_BLOCKSIZE + 15] = {};
+        uint8_t outputBlock[EDAT_BLOCKSIZE + 15] = {};
+        uint8_t blockKey[20] = {};
+        uint8_t encryptedBlockKey[16] = {};
+        uint8_t blockCmac[16] = {};
+
         size_t block_offset = i * EDAT_BLOCKSIZE;
         size_t plaintextBytesForThisBlock = (i != (blockCount-1)) ? EDAT_BLOCKSIZE : _memSize % EDAT_BLOCKSIZE;
         size_t readSize = (plaintextBytesForThisBlock + 15) & 0xfffffffffffffff0;
-        bzero(inputBlock, readSize);
-        memcpy(inputBlock, _mem, plaintextBytesForThisBlock);
-        calculateBlockKeyEdat1(i, dummyNPD, blockKey);
         int len = 0;
 
-        // encrypt the block key
-        EVP_CIPHER_CTX *ctx;
-        int ciphertext_len;
-        assure((ctx = EVP_CIPHER_CTX_new()) != nullptr );
-        assure(EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, encryptionKey, nullptr) == 1);
-        assure(EVP_CIPHER_CTX_set_padding(ctx, 0) == 1);
-        assure(EVP_EncryptUpdate(ctx, encryptedBlockKey, &len, blockKey, 16) == 1);
-        ciphertext_len = len;
-        assure(EVP_EncryptFinal_ex(ctx, encryptedBlockKey + len, &len) == 1);
-        ciphertext_len += len;
-        EVP_CIPHER_CTX_free(ctx);
-        assure(ciphertext_len == 16);
+        memcpy(inputBlock, _mem, plaintextBytesForThisBlock);
+        calculateBlockKeyEdat1(i, dummyNPD, blockKey);
 
+        {
+            // encrypt the block key
+            EVP_CIPHER_CTX *ctx = NULL;
+            cleanup([&]{
+                safeFreeCustom(ctx, EVP_CIPHER_CTX_free);
+            });
+            int ciphertext_len = 0;
+            assure(ctx = EVP_CIPHER_CTX_new());
+            assure(EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, encryptionKey, nullptr) == 1);
+            assure(EVP_CIPHER_CTX_set_padding(ctx, 0) == 1);
+            assure(EVP_EncryptUpdate(ctx, encryptedBlockKey, &len, blockKey, 16) == 1);
+            ciphertext_len = len;
+            assure(EVP_EncryptFinal_ex(ctx, encryptedBlockKey + len, &len) == 1);
+            ciphertext_len += len;
+            assure(ciphertext_len == 16);
+        }
+
+#warning TODO File is "correct" up until byte 0x4160, then it's wrong. (of course this also makes the header/checksum different)
+        
         // encrypt the data itself
         apploaderReverse(inputBlock, outputBlock, readSize, encryptedBlockKey, dummyNPD.digest, encryptedBlockKey, blockCmac);
         memcpy(encryptedBlocks+block_offset, outputBlock, readSize);
@@ -328,38 +356,49 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     }
     outfile.write((char*)encryptedBlockCMACs, blockCount * 16);
     outfile.write((char*)encryptedBlocks, _memSize + 15);
+    
 
-    // calculate CMAC of encrypted blocks and blockwise CMACS
-    CMAC_CTX *cmac_ctx = CMAC_CTX_new();
-    apploaderUnencryptedInit(cmac_ctx, encryptionKey);
-    size_t bytes_read = 0;
-    size_t amount_of_blocks = (edatData.fileLen + edatData.blockSize - 11) / edatData.blockSize;
-    size_t blocksize = edatData.flags & FLAG_COMPRESSED ? 32 : 16;
-    size_t bytes_to_read = amount_of_blocks * blocksize;
-    uint8_t cmacDataBlock[HEADER_MAX_BLOCKSIZE];
-    while (bytes_to_read > 0) {
-        size_t bytes_to_read_in_this_iteration = bytes_to_read > HEADER_MAX_BLOCKSIZE ? HEADER_MAX_BLOCKSIZE : bytes_to_read;
-        outfile.seekg(EDAT_DATA_START + bytes_read);
-        outfile.read((char*)cmacDataBlock, bytes_to_read_in_this_iteration);
-        apploaderUnencryptedUpdate(cmac_ctx, cmacDataBlock, bytes_to_read_in_this_iteration);
-        bytes_read += bytes_to_read_in_this_iteration;
-        bytes_to_read -= bytes_to_read_in_this_iteration;
+    {
+        // calculate CMAC of encrypted blocks and blockwise CMACS
+        CMAC_CTX *cmac_ctx = NULL;
+        cleanup([&]{
+            safeFreeCustom(cmac_ctx, CMAC_CTX_free);
+        });
+        uint8_t dataCMAC[16] = {};
+        uint8_t cmacDataBlock[HEADER_MAX_BLOCKSIZE] = {};
+        size_t bytes_read = 0;
+        size_t amount_of_blocks = (edatData.fileLen + edatData.blockSize - 11) / edatData.blockSize;
+        size_t blocksize = edatData.flags & FLAG_COMPRESSED ? 32 : 16;
+        size_t bytes_to_read = amount_of_blocks * blocksize;
+
+        assure(cmac_ctx = CMAC_CTX_new());
+        apploaderUnencryptedInit(cmac_ctx, encryptionKey);
+        while (bytes_to_read > 0) {
+            size_t bytes_to_read_in_this_iteration = bytes_to_read > HEADER_MAX_BLOCKSIZE ? HEADER_MAX_BLOCKSIZE : bytes_to_read;
+            outfile.seekg(EDAT_DATA_START + bytes_read);
+            outfile.read((char*)cmacDataBlock, bytes_to_read_in_this_iteration);
+            apploaderUnencryptedUpdate(cmac_ctx, cmacDataBlock, bytes_to_read_in_this_iteration);
+            bytes_read += bytes_to_read_in_this_iteration;
+            bytes_to_read -= bytes_to_read_in_this_iteration;
+        }
+        apploaderUnencryptedFinal(cmac_ctx, dataCMAC);
+        outfile.flush();
+        outfile.seekp(144);
+        outfile.write((char*)dataCMAC, 16);
     }
-    uint8_t dataCMAC[16];
-    apploaderUnencryptedFinal(cmac_ctx, dataCMAC);
-    outfile.flush();
-    outfile.seekp(144);
-    outfile.write((char*)dataCMAC, 16);
 
-    // calculate CMAC of header
     outfile.flush();
-    uint8_t file_header[160];
-    uint8_t file_header_cmac[16];
-    outfile.seekg(0);
-    outfile.read((char*)file_header, 160);
-    apploaderUnencrypted(file_header, 160, encryptionKey, file_header_cmac);
-    outfile.seekp(160);
-    outfile.write((char*)file_header_cmac, 16);
+
+    {
+        // calculate CMAC of header
+        uint8_t file_header[160] = {};
+        uint8_t file_header_cmac[16] = {};
+        outfile.seekg(0);
+        outfile.read((char*)file_header, 160);
+        apploaderUnencrypted(file_header, 160, encryptionKey, file_header_cmac);
+        outfile.seekp(160);
+        outfile.write((char*)file_header_cmac, 16);
+    }
 
     outfile.close();
 }
