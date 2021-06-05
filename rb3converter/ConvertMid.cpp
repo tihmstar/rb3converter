@@ -84,6 +84,15 @@ void hexstringToBytes(const char* string, uint8_t* bytes, size_t numberofbytes) 
     }
 }
 
+
+void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr){
+    size_t pos = data.find(toSearch);
+    while( pos != std::string::npos){
+        data.replace(pos, toSearch.size(), replaceStr);
+        pos = data.find(toSearch, pos + replaceStr.size());
+    }
+}
+
 void apploaderReverse(uint8_t *input_block, uint8_t *output_block, int input_block_len, uint8_t* key, uint8_t *iv, uint8_t *hashKey, uint8_t *hashOutput) {
     // encryption using aes-128-cbc
     EVP_CIPHER_CTX *ctx;
@@ -172,6 +181,8 @@ void ConvertMid::readKLIC(std::string inpath){
         std::getline(_is, line);
     }
     std::getline(_is, _contentId);
+    findAndReplaceAll(_contentId, "\r", "");
+    findAndReplaceAll(_contentId, "\n", "");
     std::getline(_is, line);
     std::getline(_is, keyString);
     hexstringToBytes(keyString.c_str(), _key, 16);
@@ -248,18 +259,21 @@ void ConvertMid::createEdat1(const std::string& outpath) {
         safeFree(encryptedBlockCMACs);
         safeFree(encryptedBlocks);
     });
-    uint8_t inputBlock[EDAT_BLOCKSIZE + 15];
-    uint8_t outputBlock[EDAT_BLOCKSIZE + 15];
-    uint8_t blockKey[20];
-    uint8_t encryptedBlockKey[16];
-    uint8_t blockCmac[16];
+    uint8_t inputBlock[EDAT_BLOCKSIZE + 15] = {};
+    uint8_t outputBlock[EDAT_BLOCKSIZE + 15] = {};
+    uint8_t blockKey[20] = {};
+    uint8_t encryptedBlockKey[16] = {};
+    uint8_t blockCmac[16] = {};
 
     size_t blockCount = (_memSize + EDAT_BLOCKSIZE - 1) / EDAT_BLOCKSIZE;
     npdBuffer = (uint8_t*)malloc(NPD_SIZE); // this is dirty but a valid NPD seems to have a fixed size
+    memset(npdBuffer, 0, NPD_SIZE);
+
     encryptedBlockCMACs = (uint8_t*)malloc(blockCount * 16);
     encryptedBlocks = (uint8_t*)malloc(_memSize + 15);
+    
     std::fstream outfile (outpath, std::ios::in | std::ios::out | std::ofstream::binary |  std::fstream::trunc);
-    NPD dummyNPD = NPD::writeValidNPD(std::filesystem::path(outpath).filename(), _key, npdBuffer, (uint8_t*)_contentId.c_str(), 0x00);
+    NPD dummyNPD = NPD::writeValidNPD(std::filesystem::path(outpath).filename(), _key, npdBuffer, _contentId, 0x00);
     assure(dummyNPD.validate());
     outfile.write((char*)npdBuffer, NPD_SIZE);
     outfile.write("\x00\x00\x00\x00", 4);

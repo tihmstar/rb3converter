@@ -92,7 +92,7 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
                 std::string newfilename = file + ".edat";
                 debug("converting '%s' -> '%s'",file.c_str(),newfilename.c_str());
                 auto data = con.extract_file_to_buffer(file);
-                ConvertMid convMid(data.data(), data.size(), klicpath, rappath);
+                ConvertMid convMid(data.data(), data.size(), klicpath, rappath, region);
                 convMid.convertToPS3(_ps3Path + newfilename);
             } else if (ends_with(file, "songs.dta")) {
                 debug("parsing '%s'",file.c_str());
