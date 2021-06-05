@@ -17,7 +17,7 @@ int main(int argc, const char * argv[]) {
 
 //    ConvertMid cm("/home/malte/projects/rockband_file_format/360unpack/songs/rhythmoflove1xx/rhythmoflove1xx.mid", "/home/malte/projects/rockband_file_format/klic.txt", "/home/malte/projects/rockband_file_format/raps/ntsc.rap", ConvertMid::Region_NTSC, ConvertMid::Edat_type_1);
 
-    dtaParser songsdta("/Users/tihmstar/Desktop/songs.dta");
+    dtaParser songsdta("/Users/tihmstar/Desktop/rb3/songs.dta");
     
     songsdta.writeToFile("songs.dta");
     

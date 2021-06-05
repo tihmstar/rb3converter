@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		8757FF8A25AC808200200D28 /* songsManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8757FF8825AC808200200D28 /* songsManager.cpp */; };
 		8757FF8D25AC88C700200D28 /* dtaParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8757FF8B25AC88C700200D28 /* dtaParser.cpp */; };
+		8777A8BE266BC62600250001 /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8777A8BD266BC62600250001 /* libcrypto.1.1.dylib */; };
+		8777A8BF266BC62600250001 /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 8777A8BD266BC62600250001 /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		877B3A99258789F000852CD3 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3A98258789F000852CD3 /* main.cpp */; };
 		877B3AA225878A6100852CD3 /* ConvertMogg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AA025878A6100852CD3 /* ConvertMogg.cpp */; };
 		877B3AA825878CBB00852CD3 /* libgeneral.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */; };
@@ -17,8 +19,6 @@
 		877B3AB32587C85600852CD3 /* ConvertPNG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB12587C85600852CD3 /* ConvertPNG.cpp */; };
 		877B3AB62587C86C00852CD3 /* FileLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB42587C86C00852CD3 /* FileLoader.cpp */; };
 		877B3AB92587CD0000852CD3 /* NPD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 877B3AB72587CD0000852CD3 /* NPD.cpp */; };
-		87988E84259CA21500CCB896 /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */; };
-		87988E85259CA21500CCB896 /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		87988E88259CA44400CCB896 /* STFS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87988E86259CA44400CCB896 /* STFS.cpp */; };
 /* End PBXBuildFile section */
 
@@ -39,7 +39,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				877B3AA925878CBB00852CD3 /* libgeneral.0.dylib in Embed Libraries */,
-				87988E85259CA21500CCB896 /* libcrypto.1.1.dylib in Embed Libraries */,
+				8777A8BF266BC62600250001 /* libcrypto.1.1.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -51,6 +51,7 @@
 		8757FF8925AC808200200D28 /* songsManager.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = songsManager.hpp; sourceTree = "<group>"; };
 		8757FF8B25AC88C700200D28 /* dtaParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dtaParser.cpp; sourceTree = "<group>"; };
 		8757FF8C25AC88C700200D28 /* dtaParser.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = dtaParser.hpp; sourceTree = "<group>"; };
+		8777A8BD266BC62600250001 /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1k/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
 		877B3A95258789EF00852CD3 /* rb3converter */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = rb3converter; sourceTree = BUILT_PRODUCTS_DIR; };
 		877B3A98258789F000852CD3 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		877B3AA025878A6100852CD3 /* ConvertMogg.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertMogg.cpp; sourceTree = "<group>"; };
@@ -76,7 +77,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				877B3AA825878CBB00852CD3 /* libgeneral.0.dylib in Frameworks */,
-				87988E84259CA21500CCB896 /* libcrypto.1.1.dylib in Frameworks */,
+				8777A8BE266BC62600250001 /* libcrypto.1.1.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,6 +130,7 @@
 			children = (
 				877B3AAE2587B67100852CD3 /* libcrypto.1.1.dylib */,
 				87988E83259CA21500CCB896 /* libcrypto.1.1.dylib */,
+				8777A8BD266BC62600250001 /* libcrypto.1.1.dylib */,
 				877B3AA725878CBB00852CD3 /* libgeneral.0.dylib */,
 			);
 			name = Frameworks;
@@ -324,11 +326,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				HEADER_SEARCH_PATHS = (
 					/usr/local/include,
-					"/usr/local/Cellar/openssl@1.1/1.1.1i/include",
+					"/usr/local/opt/openssl@1.1/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					"/usr/local/Cellar/openssl@1.1/1.1.1i/lib",
+					"/usr/local/opt/openssl@1.1/lib",
+					"/usr/local/Cellar/openssl@1.1/1.1.1k/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -341,11 +344,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				HEADER_SEARCH_PATHS = (
 					/usr/local/include,
-					"/usr/local/Cellar/openssl@1.1/1.1.1i/include",
+					"/usr/local/opt/openssl@1.1/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					"/usr/local/Cellar/openssl@1.1/1.1.1i/lib",
+					"/usr/local/opt/openssl@1.1/lib",
+					"/usr/local/Cellar/openssl@1.1/1.1.1k/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

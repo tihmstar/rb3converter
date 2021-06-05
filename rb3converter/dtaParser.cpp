@@ -276,7 +276,6 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
                     w += obj.keywords.at(0);
                     w += ' ';
                     w += getWriteObjData(obj.children.at(0), intendlevel, true);
-                    ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
                 }else if (obj.children.size() > 1){
                     std::string w = {'('};
                     w += obj.keywords.at(0);
