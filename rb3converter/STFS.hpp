@@ -194,7 +194,10 @@ public:
     ~STFS();
     
     void extract_all(std::string outputPath);
+    std::vector<std::string> listFiles();
+    void extract_file(std::string file, std::string outputPath, std::string outFilename = "");
     
+    std::vector<uint8_t> extract_file_to_buffer(std::string file);
 };
 
 #endif /* STFS_hpp */

@@ -13,13 +13,23 @@
 #include <arpa/inet.h>
 
 ConvertPNG::ConvertPNG(std::string inpath)
-: FileLoader(inpath)
+: _loader(nullptr)
+, _mem(NULL), _memSize(NULL)
 {
-    
+    _loader = new FileLoader(inpath);
+    _mem = _loader->mem();
+    _memSize = _loader->size();
+}
+
+ConvertPNG::ConvertPNG(const void *mem, size_t memSize)
+: _loader(nullptr)
+, _mem((const uint8_t*)mem), _memSize(memSize)
+{
+    //
 }
 
 ConvertPNG::~ConvertPNG(){
-    
+    safeDelete(_loader);
 }
 
 void ConvertPNG::convertToPS3(std::string outpath){

@@ -11,28 +11,97 @@
 #include "ConvertMid.hpp"
 #include "STFS.hpp"
 #include "dtaParser.hpp"
+#include <libgeneral/macros.h>
+#include <getopt.h>
+#include "songsManager.hpp"
 
-int main(int argc, const char * argv[]) {
-    printf("start\n");
+static struct option longopts[] = {
+    { "help",           no_argument,        NULL, 'h' },
+    { "klic",           required_argument,  NULL, 'k' },
+    { "rap",            required_argument,  NULL, 'p' },
+    { "region",         required_argument,  NULL, 'r' },
+    { NULL, 0, NULL, 0 }
+};
 
-//    ConvertMid cm("/home/malte/projects/rockband_file_format/360unpack/songs/rhythmoflove1xx/rhythmoflove1xx.mid", "/home/malte/projects/rockband_file_format/klic.txt", "/home/malte/projects/rockband_file_format/raps/ntsc.rap", ConvertMid::Region_NTSC, ConvertMid::Edat_type_1);
 
-    dtaParser songsdta("/Users/tihmstar/Desktop/rb3/songs.dta");
+void cmd_help(){
+    printf("Usage: rb3converter <CON dir> <PS3 dir>\n");
+    printf("Converts RB3 XBOX songs to PS3 songs\n\n");
+    printf("  -h, --help\t\t\tprints usage information\n");
+    printf("  -k, --klic <path>\tPath to klic.txt\n");
+    printf("  -p, --rap <path>\tPath to .rap\n");
+    printf("  -r, --region <reg>\tSet region to 'pal' or 'ntsc'\n");
+}
+
+int main_r(int argc, const char * argv[]) {
+    info("%s", VERSION_STRING);
+
+    int optindex = 0;
+    int opt = 0;
+    const char *condir = NULL;
+    const char *ps3dir = NULL;
+
+    const char *klicPath = NULL;
+    const char *rapPath = NULL;
+        
+    ConvertMid::Region region = ConvertMid::Region_undefined;
     
-    songsdta.writeToFile("songs.dta");
-    
-    for (int i=0; i<songsdta.getSongsCnt(); i++) {
-        auto id = songsdta.getSongIDForSong(i);
-        printf("id=%s\n",id.c_str());
+    while ((opt = getopt_long(argc, (char* const *)argv, "hk:p:r:", longopts, &optindex)) > 0) {
+        switch (opt) {
+            case 'h':
+                cmd_help();
+                return 0;
+            case 'k': //long-opt klic
+                klicPath = optarg;
+                break;
+            case 'p': //long-opt rap
+                rapPath = optarg;
+                break;
+            case 'r': //long-opt region
+                if (strcasecmp(optarg, "pal") == 0) {
+                    region = ConvertMid::Region_PAL;
+                } else if (strcasecmp(optarg, "ntsc") == 0) {
+                    region = ConvertMid::Region_NTSC;
+                } else {
+                    reterror("unknown region '%s'",optarg);
+                }
+
+                break;
+
+            default:
+                cmd_help();
+                return -1;
+        }
     }
     
-//    STFS xboxfs("/Users/tihmstar/Desktop/rb3/rhythmoflove1xx.con");
-//
-//    xboxfs.extract_all(".");
-    
-    
-//    ConvertMid cm("/Users/tihmstar/Desktop/rb3/unpacked/songs/rhythmoflove1xx/rhythmoflove1xx.mid", "/Users/tihmstar/Desktop/C3CONToolsv401/bin/klic.txt", "/Users/tihmstar/Desktop/C3CONToolsv401/bin/raps/ntsc.rap", ConvertMid::Region_NTSC, ConvertMid::Edat_type_1);
+    retassure(region != ConvertMid::Region_undefined, "Error: region not set");
 
-    printf("done\n");
+    if (argc-optind == 2) {
+        argc -= optind;
+        argv += optind;
+        condir = argv[0];
+        ps3dir = argv[1];
+    }else{
+        cmd_help();
+        return -2;
+    }
+
+    songsManager mgr(condir,ps3dir);
+    
+    mgr.convertCONtoPS3(klicPath, rapPath, region);
     return 0;
+}
+
+int main(int argc, const char * argv[]) {
+#ifdef DEBUG
+    return main_r(argc, argv);
+#else
+    try {
+        return main_r(argc, argv);
+    } catch (tihmstar::exception &e) {
+        printf("%s: failed with exception:\n",PACKAGE_NAME);
+        e.dump();
+        return e.code();
+    }
+#endif
 }

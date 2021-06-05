@@ -20,6 +20,9 @@ protected:
 public:
     FileLoader(std::string inpath);
     ~FileLoader();
+    
+    const uint8_t *mem();
+    size_t size();
 };
 
 #endif /* FileLoader_hpp */

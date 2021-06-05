@@ -34,21 +34,31 @@ public:
     size_t usedSize = 0;
 };
 
-class dtaParser : FileLoader{
+class dtaParser{
+    FileLoader *_loader;
+    const uint8_t *_mem; //don't free this!
+    size_t _memSize;
     std::vector<dtaObject> _roots;
+    uint32_t _nextSongID;
     
     dtaObject parseElement(const char *buf, size_t size);
     
     std::string getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noending);
     std::string getWriteObjData(const dtaObject &obj, int intendlevel, bool noending = false);
-    
+        
 public:
     dtaParser(std::string inpath);
+    dtaParser(const void *mem, size_t memSize);
+
     ~dtaParser();
     
     size_t getSongsCnt();
     
     std::string getSongIDForSong(uint32_t songnum);
+    
+    dtaParser& operator+=(const dtaParser &add);
+    
+    void verifyAndFixSongIDs();
     
     void writeSongToFile(std::string outfile, uint32_t songnum);
     

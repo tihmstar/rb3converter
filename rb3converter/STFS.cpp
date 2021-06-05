@@ -174,3 +174,44 @@ void STFS::extract_all(std::string outputPath){
         retassure(fwrite(data.data(), 1, data.size(), f) == data.size(),"Failed to write target file");
     }
 }
+
+std::vector<std::string> STFS::listFiles(){
+    std::vector<std::string> ret;
+    for (auto &file : _files) {
+        ret.push_back(file.first);
+    }
+    return ret;
+}
+
+void STFS::extract_file(std::string file, std::string outputPath, std::string outFilename){
+    if (outputPath.back() != '/') outputPath += '/';
+
+    for (auto &f : _files) {
+        if (f.first != file) continue;
+        if (outFilename.size() == 0) outFilename = f.first;
+        std::string filepath = outputPath + outFilename;
+        if (filepath.back() == '/') {
+            debug("creating directory=%s",filepath.c_str());
+            retassure(!mkdir(filepath.c_str(), 0755) || errno == EEXIST, "Failed to create out directory '%s'",filepath.c_str());
+        }else{
+            FILE *fp = NULL;
+            cleanup([&]{
+                safeFreeCustom(fp, fclose);
+            });
+            debug("writing file=%s",filepath.c_str());
+            auto data = getFile(f.second);
+            retassure(fp = fopen(filepath.c_str(), "wb"), "Failed to open target file");
+            retassure(fwrite(data.data(), 1, data.size(), fp) == data.size(),"Failed to write target file");
+        }
+        return;
+    }
+    reterror("File '%s' not found",file.c_str());
+}
+
+std::vector<uint8_t> STFS::extract_file_to_buffer(std::string file){
+    for (auto &f : _files) {
+        if (f.first != file) continue;
+        return getFile(f.second);
+    }
+    reterror("File '%s' not found",file.c_str());
+}

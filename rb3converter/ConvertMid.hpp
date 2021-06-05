@@ -11,7 +11,7 @@
 #include "FileLoader.hpp"
 #include "NPD.hpp"
 
-class ConvertMid : public FileLoader {
+class ConvertMid {
 public:
     enum Region{
         Region_undefined = 0,
@@ -25,6 +25,9 @@ public:
         Edat_type_3
     };
 private:
+    FileLoader *_loader;
+    const uint8_t *_mem; //don't free this!
+    size_t _memSize;
     Region _region;
     std::string _contentId;
     uint8_t _key[16] = {0};
@@ -36,6 +39,7 @@ private:
 
 public:
     ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region = Region::Region_PAL, Edat_type edattype = Edat_type::Edat_type_1);
+    ConvertMid(const void *mem, size_t memSize, std::string klicpath, std::string rappath, Region region = Region::Region_PAL, Edat_type edattype = Edat_type::Edat_type_1);
     ~ConvertMid();
 
     void convertToPS3(std::string outpath);

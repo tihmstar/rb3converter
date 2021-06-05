@@ -20,7 +20,13 @@ FileLoader::FileLoader(std::string inpath)
     assure((_fd = open(inpath.c_str(), O_RDONLY)) != -1);
     assure(!fstat(_fd, &st));
     _memSize = st.st_size;
-    assure((_mem = (const uint8_t*)mmap(NULL, _memSize, PROT_READ, MAP_PRIVATE, _fd, 0)) != (uint8_t*)-1);
+    if (_memSize) {
+        assure((_mem = (const uint8_t*)mmap(NULL, _memSize, PROT_READ, MAP_PRIVATE, _fd, 0)) != (uint8_t*)-1);
+    }else{
+        _memSize = 1;
+        assure((_mem = (const uint8_t*)mmap(NULL, _memSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) != (uint8_t*)-1);
+        ((char*)_mem)[0] = '\0';
+    }
 }
 
 FileLoader::~FileLoader(){
@@ -30,4 +36,12 @@ FileLoader::~FileLoader(){
     if (_fd != -1){
         close(_fd);
     }
+}
+
+const uint8_t *FileLoader::mem(){
+    return _mem;
+}
+
+size_t FileLoader::size(){
+    return _memSize;
 }

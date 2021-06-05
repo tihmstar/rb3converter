@@ -132,10 +132,25 @@ void apploaderUnencrypted(uint8_t* data, size_t len, uint8_t* hashKey, uint8_t* 
 }
 
 ConvertMid::ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region, Edat_type edattype)
-: FileLoader(std::move(inpath)), _region(region)
+: _loader(nullptr)
+, _mem(NULL), _memSize(NULL)
+, _region(region)
 {
-    readKLIC(std::move(klicpath));
-    readRapKey(std::move(rappath));
+    _loader = new FileLoader(inpath);
+    _mem = _loader->mem();
+    _memSize = _loader->size();
+
+    readKLIC(klicpath);
+    readRapKey(rappath);
+}
+
+ConvertMid::ConvertMid(const void *mem, size_t memSize, std::string klicpath, std::string rappath, Region region, Edat_type edattype)
+: _loader(nullptr)
+, _mem((const uint8_t*)mem), _memSize(memSize)
+, _region(region)
+{
+    readKLIC(klicpath);
+    readRapKey(rappath);
 }
 
 ConvertMid::~ConvertMid(){
@@ -228,16 +243,16 @@ void ConvertMid::createEdat1(const std::string& outpath) {
     uint8_t *npdBuffer = nullptr;
     uint8_t *encryptedBlockCMACs = nullptr;
     uint8_t *encryptedBlocks = nullptr;
-    uint8_t inputBlock[EDAT_BLOCKSIZE + 15];
-    uint8_t outputBlock[EDAT_BLOCKSIZE + 15];
-    uint8_t blockKey[20];
-    uint8_t encryptedBlockKey[16];
-    uint8_t blockCmac[16];
     cleanup([&]{
         safeFree(npdBuffer);
         safeFree(encryptedBlockCMACs);
         safeFree(encryptedBlocks);
     });
+    uint8_t inputBlock[EDAT_BLOCKSIZE + 15];
+    uint8_t outputBlock[EDAT_BLOCKSIZE + 15];
+    uint8_t blockKey[20];
+    uint8_t encryptedBlockKey[16];
+    uint8_t blockCmac[16];
 
     size_t blockCount = (_memSize + EDAT_BLOCKSIZE - 1) / EDAT_BLOCKSIZE;
     npdBuffer = (uint8_t*)malloc(NPD_SIZE); // this is dirty but a valid NPD seems to have a fixed size
@@ -266,7 +281,7 @@ void ConvertMid::createEdat1(const std::string& outpath) {
         memcpy(encryptionKey, _rapKey, 16);
     } else {
         // there is no valid encryption key available
-        assure(0);
+        reterror("there is no valid encryption key available");
     }
 
     // this is where the real encryption is performed (compare with EDAT.cs -> encryptData(...))

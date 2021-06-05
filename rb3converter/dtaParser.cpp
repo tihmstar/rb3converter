@@ -8,19 +8,30 @@
 #include "dtaParser.hpp"
 #include <libgeneral/macros.h>
 #include <fcntl.h>
+#include <set>
 
 #define INTENDATIONCNT 2
 
 dtaParser::dtaParser(std::string inpath)
-: FileLoader(inpath)
+: _loader(nullptr)
+, _mem(NULL), _memSize(NULL)
+, _nextSongID(1000000141)
 {
+    _loader = new FileLoader(inpath);
+    _mem = _loader->mem();
+    _memSize = _loader->size();
+
     const char *buf = (const char *)_mem;
     size_t bufSize = _memSize;
     while (bufSize>0) {
-        dtaObject obj;
+        dtaObject obj = {};
         try {
             obj = parseElement(buf, bufSize);
-        } catch (...) {
+        } catch (tihmstar::exception &e) {
+#ifdef DEBUG
+            e.dump();
+#endif
+            
             //check if only invisible characters are at the end of file. If so, ignore the error
             for (size_t i = 0; i<bufSize; i++) {
                 char c = buf[i];
@@ -35,23 +46,67 @@ dtaParser::dtaParser(std::string inpath)
         }
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
-        _roots.push_back(obj);
+        if (obj.type != dtaObject::type_empty) {
+            _roots.push_back(obj);
+        }
+        assure(bufSize < _memSize); //new size can't be bigger
+    }
+}
+
+dtaParser::dtaParser(const void *mem, size_t memSize)
+: _loader(nullptr)
+, _mem((const uint8_t*)mem), _memSize(memSize)
+, _nextSongID(1000000141)
+{
+    const char *buf = (const char *)_mem;
+    size_t bufSize = _memSize;
+    while (bufSize>0) {
+        dtaObject obj = {};
+        try {
+            obj = parseElement(buf, bufSize);
+        } catch (tihmstar::exception &e) {
+#ifdef DEBUG
+            e.dump();
+#endif
+            
+            //check if only invisible characters are at the end of file. If so, ignore the error
+            for (size_t i = 0; i<bufSize; i++) {
+                char c = buf[i];
+                if (c == '\r' ||
+                    c == '\n' ||
+                    c == ' ') {
+                    continue;
+                }
+                throw;
+            }
+            break;
+        }
+        buf += obj.usedSize;
+        bufSize -= obj.usedSize;
+        if (obj.type != dtaObject::type_empty) {
+            _roots.push_back(obj);
+        }
         assure(bufSize < _memSize); //new size can't be bigger
     }
 }
 
 dtaParser::~dtaParser(){
-    //
+    safeDelete(_loader);
 }
 
 dtaObject dtaParser::parseElement(const char *buf, size_t size){
-    dtaObject ret;
+    dtaObject ret = {};
     bool didOpen = false;
     size_t origSize = size;
+    const char *origBuf = buf;
     bool isNeg = false;
     
-    while (size-- > 0) {
-        char c = *buf++;
+    if (origSize == 509) {
+        printf("");
+    }
+    
+    while (size > 0) {
+        char c = *buf++;size--;
         if (c == ' ' ||
             c == '\n' ||
             c == '\r' ) {
@@ -204,9 +259,10 @@ end:
         ret.comment.size() == 0) {
         ret.type = dtaObject::type_empty;
     }
+        
     assure(ret.type != dtaObject::type_undefined);
-    ret.usedSize = origSize-size;
-    retassure(didOpen, "invalid object");
+    ret.usedSize = buf-origBuf;
+    retassure(didOpen || ret.type == dtaObject::type_empty, "invalid object");
     return ret;
 }
 
@@ -389,8 +445,51 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
     return ret;
 }
 
+dtaParser& dtaParser::operator+=(const dtaParser &add){
+    _roots.insert(_roots.end(), add._roots.begin(), add._roots.end());
+    return *this;
+}
+
+void dtaParser::verifyAndFixSongIDs(){
+    std::set<std::string> songIDs;
+    for (dtaObject &song : _roots) {
+        assure(song.type == dtaObject::type_children);
+        for (auto &child : song.children) {
+            if (child.keys.size()) {
+                std::string &key = child.keys.at(0);
+                if (key == "song_id") {
+                    std::string curID;
+                    if (child.intValues.size()) {
+                        curID = std::to_string(child.intValues.at(0));
+                    }else if (child.strValue.size()){
+                        curID = child.strValue;
+                    }else{
+                        reterror("error reading song_id");
+                    }
+                    if (songIDs.find(curID) == songIDs.end()) {
+                        //unknown ID, this is fine!
+                        songIDs.insert(curID);
+                    }else{
+                        std::string newID;
+                        do{
+                            newID = std::to_string(_nextSongID++);
+                        } while (songIDs.find(newID) != songIDs.end());
+                        warning("Duplicate songid '%s' found!, replaceing with '%s'",curID.c_str(),newID.c_str());
+                        child.intValues.clear(); //make sure we don't have it numeric
+                        child.strValue = newID;
+                        songIDs.insert(newID);
+                    }
+                    goto doContinue;
+                }
+            }
+        }
+    doContinue:
+        continue;
+    }
+}
 
 void dtaParser::writeSongToFile(std::string outfile, uint32_t songnum){
+    verifyAndFixSongIDs();
     int fd = -1;
     cleanup([&]{
         if (fd > 0) {
@@ -406,31 +505,16 @@ void dtaParser::writeSongToFile(std::string outfile, uint32_t songnum){
 
 
 void dtaParser::writeToFile(std::string outfile){
+    verifyAndFixSongIDs();
     int fd = -1;
     cleanup([&]{
-        if (fd > 0) {
-            close(fd); fd = -1;
-        }
+        safeClose(fd);
     });
     
     retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0, "failed to create file");
     
-#ifdef DEBUG
-    int counter = 0;
-#endif
-    
     for (dtaObject &song : _roots) {
-//#ifdef DEBUG
-//        if (counter == 2){
-//            printf("");
-//        }
-//#endif
         std::string w = getWriteObjData(song, 0);
         write(fd, w.data(), w.size());
-#ifdef DEBUG
-        counter++;
-#endif
     }
-    
-    printf("");
 }
