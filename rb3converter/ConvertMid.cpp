@@ -324,10 +324,10 @@ void ConvertMid::createEdat1(const std::string& outpath) {
 
         size_t block_offset = i * EDAT_BLOCKSIZE;
         size_t plaintextBytesForThisBlock = (i != (blockCount-1)) ? EDAT_BLOCKSIZE : _memSize % EDAT_BLOCKSIZE;
-        size_t readSize = (plaintextBytesForThisBlock + 15) & 0xfffffffffffffff0;
+        size_t readSize = (plaintextBytesForThisBlock + 15) & ~0xf;
         int len = 0;
 
-        memcpy(inputBlock, _mem, plaintextBytesForThisBlock);
+        memcpy(inputBlock, _mem + block_offset, plaintextBytesForThisBlock);
         calculateBlockKeyEdat1(i, dummyNPD, blockKey);
 
         {
@@ -347,16 +347,14 @@ void ConvertMid::createEdat1(const std::string& outpath) {
             assure(ciphertext_len == 16);
         }
 
-#warning TODO File is "correct" up until byte 0x4160, then it's wrong. (of course this also makes the header/checksum different)
-        
         // encrypt the data itself
-        apploaderReverse(inputBlock, outputBlock, readSize, encryptedBlockKey, dummyNPD.digest, encryptedBlockKey, blockCmac);
+        apploaderReverse(inputBlock, outputBlock, (int)readSize, encryptedBlockKey, dummyNPD.digest, encryptedBlockKey, blockCmac);
         memcpy(encryptedBlocks+block_offset, outputBlock, readSize);
         memcpy(encryptedBlockCMACs+(i*16), blockCmac, 16);
     }
     outfile.write((char*)encryptedBlockCMACs, blockCount * 16);
     outfile.write((char*)encryptedBlocks, _memSize + 15);
-    
+        
 
     {
         // calculate CMAC of encrypted blocks and blockwise CMACS
