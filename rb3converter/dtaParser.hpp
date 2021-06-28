@@ -35,9 +35,6 @@ public:
 };
 
 class dtaParser{
-    FileLoader *_loader;
-    const uint8_t *_mem; //don't free this!
-    size_t _memSize;
     std::vector<dtaObject> _roots;
     uint32_t _nextSongID;
     

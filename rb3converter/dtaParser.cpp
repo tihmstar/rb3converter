@@ -13,13 +13,15 @@
 #define INTENDATIONCNT 2
 
 dtaParser::dtaParser(std::string inpath)
-: _loader(nullptr)
-, _mem(NULL), _memSize(NULL)
-, _nextSongID(1000000141)
+: _nextSongID(1000000141)
 {
-    _loader = new FileLoader(inpath);
-    _mem = _loader->mem();
-    _memSize = _loader->size();
+    FileLoader *loader = nullptr;
+    cleanup([&]{
+        safeDelete(loader);
+    });
+    loader = new FileLoader(inpath);
+    const uint8_t *_mem = loader->mem();
+    size_t _memSize = loader->size();
 
     const char *buf = (const char *)_mem;
     size_t bufSize = _memSize;
@@ -53,15 +55,13 @@ dtaParser::dtaParser(std::string inpath)
     }
 }
 
-#define DEBUG_PARSER
+//#define DEBUG_PARSER
 
 dtaParser::dtaParser(const void *mem, size_t memSize)
-: _loader(nullptr)
-, _mem((const uint8_t*)mem), _memSize(memSize)
-, _nextSongID(1000000141)
+: _nextSongID(1000000141)
 {
-    const char *buf = (const char *)_mem;
-    size_t bufSize = _memSize;
+    const char *buf = (const char *)mem;
+    size_t bufSize = memSize;
     while (bufSize>0) {
         dtaObject obj = {};
 #ifndef DEBUG_PARSER
@@ -92,12 +92,12 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
         if (obj.type != dtaObject::type_empty) {
             _roots.push_back(obj);
         }
-        assure(bufSize < _memSize); //new size can't be bigger
+        assure(bufSize < memSize); //new size can't be bigger
     }
 }
 
 dtaParser::~dtaParser(){
-    safeDelete(_loader);
+    //
 }
 
 dtaObject dtaParser::parseElement(const char *buf, size_t size){

@@ -33,15 +33,8 @@ songsManager::songsManager(std::string conPath, std::string ps3Path)
     try {
         _dta = new dtaParser(ps3DtaPath);
     } catch (...) {
-        warning("'%s' does not exist, creating...",ps3DtaPath.c_str());
-        {
-            int fd = -1;
-            cleanup([&]{
-                safeClose(fd);
-            });
-            retassure(fd = open(ps3DtaPath.c_str(), O_WRONLY | O_CREAT, 0644), "Failed to create '%s'",ps3DtaPath.c_str());
-        }
-        _dta = new dtaParser(ps3DtaPath);
+        warning("'%s' does not exist",ps3DtaPath.c_str());
+        _dta = new dtaParser("\x00",1);
     }
     
 }
@@ -72,9 +65,7 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
     
     std::queue<std::string> conPaths;
     std::mutex conPathsLck;
-    
-    size_t conPathsSongNums = conPaths.size();
-    
+        
     while ((ent = readdir (dir)) != NULL) {
         //skip hidden files
         if (ent->d_type != DT_REG || strncmp(".", ent->d_name, 1) == 0) continue;
@@ -88,6 +79,8 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
         
         conPaths.push(path);
     }
+    
+    size_t conPathsSongNums = conPaths.size();
     
     auto processCon = [&](std::string path){
         STFS con(path);
