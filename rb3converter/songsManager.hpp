@@ -15,12 +15,14 @@
 class songsManager {
     std::string _conPath;
     std::string _ps3Path;
+    int _threads;
 
     dtaParser *_dta;
 public:
     songsManager(std::string conPath, std::string ps3Path);
     ~songsManager();
     
+    void setThreads(int threads);
     
     void convertCONtoPS3(std::string klicpath, std::string rappath, ConvertMid::Region region);
 };

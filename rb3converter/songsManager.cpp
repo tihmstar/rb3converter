@@ -12,6 +12,8 @@
 #include "STFS.hpp"
 #include "ConvertPNG.hpp"
 #include "ConvertMogg.hpp"
+#include <queue>
+#include <thread>
 
 inline bool ends_with(std::string const & value, std::string const & ending){
     if (ending.size() > value.size()) return false;
@@ -20,7 +22,7 @@ inline bool ends_with(std::string const & value, std::string const & ending){
 
 
 songsManager::songsManager(std::string conPath, std::string ps3Path)
-: _conPath(conPath), _ps3Path(ps3Path)
+: _conPath(conPath), _ps3Path(ps3Path), _threads(1)
 ,_dta(NULL)
 {
     if (_conPath.back() != '/') _conPath += '/';
@@ -48,6 +50,15 @@ songsManager::~songsManager(){
     safeDelete(_dta);
 }
 
+void songsManager::setThreads(int threads){
+    if (threads < 1){
+        _threads = 1;
+    }else{
+        _threads = threads;
+    }
+}
+
+
 void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, ConvertMid::Region region){
     DIR *dir = NULL;
     cleanup([&]{
@@ -56,6 +67,13 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
     struct dirent *ent = NULL;
     
     assure(dir = opendir(_conPath.c_str()));
+    
+    std::mutex songsLck;
+    
+    std::queue<std::string> conPaths;
+    std::mutex conPathsLck;
+    
+    size_t conPathsSongNums = conPaths.size();
     
     while ((ent = readdir (dir)) != NULL) {
         //skip hidden files
@@ -68,16 +86,21 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
         }
         info("Processing song='%s'",ent->d_name);
         
+        conPaths.push(path);
+    }
+    
+    auto processCon = [&](std::string path){
         STFS con(path);
         auto files = con.listFiles();
+        
         for (auto &file : files) {
             if (ends_with(file, ".milo_xbox")) {
-                std::string newfilename = file.substr(file.size()-(sizeof(".milo_xbox")-1))+".milo_ps3";
+                std::string newfilename = file.substr(0,file.size()-(sizeof(".milo_xbox")-1))+".milo_ps3";
                 debug("renaming '%s' -> '%s'",file.c_str(),newfilename.c_str());
                 con.extract_file(file, _ps3Path, newfilename);
                 
             } else if (ends_with(file, ".png_xbox")) {
-                std::string newfilename = file.substr(file.size()-(sizeof(".png_xbox")-1))+".png_ps3";
+                std::string newfilename = file.substr(0,file.size()-(sizeof(".png_xbox")-1))+".png_ps3";
                 debug("converting '%s' -> '%s'",file.c_str(),newfilename.c_str());
                 auto data = con.extract_file_to_buffer(file);
                 ConvertPNG convPng(data.data(), data.size());
@@ -98,16 +121,47 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
                 debug("parsing '%s'",file.c_str());
                 auto data = con.extract_file_to_buffer(file);
                 dtaParser curSongs(data.data(),data.size());
-                *_dta += curSongs;
+                {
+                    std::unique_lock<std::mutex> ul(songsLck);
+                    *_dta += curSongs;
+                }
             } else {
                 debug("extracting=%s",file.c_str());
                 con.extract_file(file, _ps3Path);
             }
         }
-        
-        _dta->verifyAndFixSongIDs();
-
-        _dta->writeToFile(_ps3Path + "songs/songs.dta");
-        
+    };
+    
+    std::vector<std::thread *> workers;
+    for (int i=0; i<_threads; i++) {
+        workers.push_back(new std::thread([&](int tid){
+            while (true) {
+                std::string path;
+                {
+                    std::unique_lock<std::mutex> ul(conPathsLck);
+                    if (conPaths.size() == 0) {
+                        info("[%d] thread retirning",tid);
+                        return;
+                    }
+                    path = conPaths.front(); conPaths.pop();
+                }
+                processCon(path);
+            }
+        },i));
     }
+    
+    info("main thread waiting for workes to finish");
+    for (std::thread *t : workers) {
+        t->join();
+        delete t;
+    }
+    workers.clear();
+    
+    
+    info("fixing song ids");
+    _dta->verifyAndFixSongIDs();
+
+    _dta->writeToFile(_ps3Path + "songs/songs.dta");
+    
+    info("Done processing %llu songs!",conPathsSongNums);
 }

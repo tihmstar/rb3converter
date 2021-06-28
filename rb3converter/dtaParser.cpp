@@ -53,6 +53,8 @@ dtaParser::dtaParser(std::string inpath)
     }
 }
 
+#define DEBUG_PARSER
+
 dtaParser::dtaParser(const void *mem, size_t memSize)
 : _loader(nullptr)
 , _mem((const uint8_t*)mem), _memSize(memSize)
@@ -62,8 +64,11 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
     size_t bufSize = _memSize;
     while (bufSize>0) {
         dtaObject obj = {};
+#ifndef DEBUG_PARSER
         try {
+#endif
             obj = parseElement(buf, bufSize);
+#ifndef DEBUG_PARSER
         } catch (tihmstar::exception &e) {
 #ifdef DEBUG
             e.dump();
@@ -81,6 +86,7 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
             }
             break;
         }
+#endif
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
         if (obj.type != dtaObject::type_empty) {
@@ -259,8 +265,19 @@ end:
         ret.comment.size() == 0) {
         ret.type = dtaObject::type_empty;
     }
-        
-    assure(ret.type != dtaObject::type_undefined);
+    
+    if (ret.type == dtaObject::type_undefined) {
+        try {
+            /*
+             empty song_id ??
+             nvm we can fix that later
+             */
+            if (ret.keys.at(0) != "song_id") throw;
+            ret.type = dtaObject::type_keys;
+        } catch (...) {
+            reterror("parser error");
+        }
+    }
     ret.usedSize = buf-origBuf;
     retassure(didOpen || ret.type == dtaObject::type_empty, "invalid object");
     return ret;
@@ -464,17 +481,25 @@ void dtaParser::verifyAndFixSongIDs(){
                     }else if (child.strValue.size()){
                         curID = child.strValue;
                     }else{
-                        reterror("error reading song_id");
+                        debug("error reading song_id!");
+                        goto make_new_id;
+                    }
+                    if (curID.size() == 0) {
+                        debug("fixing empty song id!");
+                        goto make_new_id;
                     }
                     if (songIDs.find(curID) == songIDs.end()) {
                         //unknown ID, this is fine!
                         songIDs.insert(curID);
-                    }else{
+                        continue;
+                    }
+                    {
+                make_new_id:
                         std::string newID;
                         do{
                             newID = std::to_string(_nextSongID++);
                         } while (songIDs.find(newID) != songIDs.end());
-                        warning("Duplicate songid '%s' found!, replaceing with '%s'",curID.c_str(),newID.c_str());
+                        warning("Replacing '%s' with '%s'",curID.c_str(),newID.c_str());
                         child.intValues.clear(); //make sure we don't have it numeric
                         child.strValue = newID;
                         songIDs.insert(newID);
