@@ -49,7 +49,15 @@ dtaParser::dtaParser(std::string inpath)
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
         if (obj.type != dtaObject::type_empty) {
-            _roots.push_back(obj);
+            if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
+                && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
+                ) {
+                //WTF??
+                debug("Unpacking only child!");
+                _roots.push_back(obj.children.at(0));
+            }else{
+                _roots.push_back(obj);
+            }
         }
         assure(bufSize < _memSize); //new size can't be bigger
     }
@@ -87,10 +95,19 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
             break;
         }
 #endif
+        
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
         if (obj.type != dtaObject::type_empty) {
-            _roots.push_back(obj);
+            if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
+                && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
+                ) {
+                //WTF??
+                debug("Unpacking only child!");
+                _roots.push_back(obj.children.at(0));
+            }else{
+                _roots.push_back(obj);
+            }
         }
         assure(bufSize < memSize); //new size can't be bigger
     }
@@ -266,17 +283,21 @@ end:
         ret.type = dtaObject::type_empty;
     }
     
-    if (ret.type == dtaObject::type_undefined) {
-        try {
-            /*
-             empty song_id ??
-             nvm we can fix that later
-             */
-            if (ret.keys.at(0) != "song_id") throw;
-            ret.type = dtaObject::type_keys;
-        } catch (...) {
-            reterror("parser error");
+    if ((ret.keys.size() && ret.keys.at(0) == "song_id")
+        || (ret.keywords.size() && ret.keywords.at(0) == "song_id")) {
+
+        ret.keys.clear();
+        ret.keywords.clear();
+
+        ret.keys.push_back("song_id");
+        ret.type = dtaObject::type_ints;
+        if (ret.intValues.size() == 0 && ret.strValue.size() == 0) {
+            ret.strValue = "id_fixme";
         }
+    }
+        
+    if (ret.type == dtaObject::type_undefined) {
+        reterror("parser error");
     }
     ret.usedSize = buf-origBuf;
     retassure(didOpen || ret.type == dtaObject::type_empty, "invalid object");
@@ -293,16 +314,20 @@ std::string dtaParser::getSongIDForSong(uint32_t songnum){
     assure(song.type == dtaObject::type_children);
 
     for (auto &child : song.children) {
+        std::string key;
         if (child.keys.size()) {
-            std::string &key = child.keys.at(0);
-            if (key == "song_id") {
-                if (child.intValues.size()) {
-                    return std::to_string(child.intValues.at(0));
-                }else if (child.strValue.size()){
-                    return child.strValue;
-                }else{
-                    reterror("error reading song_id");
-                }
+            key = child.keys.at(0);
+        }else if (child.keywords.size()){
+            key = child.keywords.at(0);
+        }
+        
+        if (key == "song_id") {
+            if (child.intValues.size()) {
+                return std::to_string(child.intValues.at(0));
+            }else if (child.strValue.size()){
+                return child.strValue;
+            }else{
+                reterror("error reading song_id");
             }
         }
     }
@@ -472,40 +497,51 @@ void dtaParser::verifyAndFixSongIDs(){
     for (dtaObject &song : _roots) {
         assure(song.type == dtaObject::type_children);
         for (auto &child : song.children) {
+            std::string key;
             if (child.keys.size()) {
-                std::string &key = child.keys.at(0);
-                if (key == "song_id") {
-                    std::string curID;
-                    if (child.intValues.size()) {
-                        curID = std::to_string(child.intValues.at(0));
-                    }else if (child.strValue.size()){
-                        curID = child.strValue;
-                    }else{
-                        debug("error reading song_id!");
-                        goto make_new_id;
-                    }
-                    if (curID.size() == 0) {
-                        debug("fixing empty song id!");
-                        goto make_new_id;
-                    }
-                    if (songIDs.find(curID) == songIDs.end()) {
-                        //unknown ID, this is fine!
-                        songIDs.insert(curID);
-                        continue;
-                    }
-                    {
-                make_new_id:
-                        std::string newID;
-                        do{
-                            newID = std::to_string(_nextSongID++);
-                        } while (songIDs.find(newID) != songIDs.end());
-                        warning("Replacing '%s' with '%s'",curID.c_str(),newID.c_str());
-                        child.intValues.clear(); //make sure we don't have it numeric
-                        child.strValue = newID;
-                        songIDs.insert(newID);
-                    }
-                    goto doContinue;
+                key = child.keys.at(0);
+            }else if (child.keywords.size()){
+                key = child.keywords.at(0);
+            }
+            if (key == "song_id") {
+                std::string curID;
+                if (child.intValues.size()) {
+                    curID = std::to_string(child.intValues.at(0));
+                }else if (child.strValue.size()){
+                    curID = child.strValue;
+                }else{
+                    debug("error reading song_id!");
+                    goto make_new_id;
                 }
+                if (curID.size() == 0) {
+                    debug("fixing empty song id!");
+                    goto make_new_id;
+                }
+                                    
+                if (std::to_string(atoll(curID.c_str())) != curID) {
+                    debug("fixing non-numeric song id!");
+                    goto make_new_id;
+                }
+                
+                if (songIDs.find(curID) == songIDs.end()) {
+                    //unknown ID, this is fine!
+                    assert(curID.size());
+                    songIDs.insert(curID);
+                    continue;
+                }
+                {
+            make_new_id:
+                    uint32_t newID;
+                    do{
+                        newID = _nextSongID++;
+                    } while (songIDs.find(std::to_string(newID)) != songIDs.end());
+                    warning("Replacing '%s' with '%u'",curID.c_str(),newID);
+                    child.strValue.clear(); //make sure we don't have it as string
+                    child.intValues.clear(); //make sure we don't have other numbers
+                    child.intValues.push_back(newID);
+                    songIDs.insert(std::to_string(newID));
+                }
+                goto doContinue;
             }
         }
     doContinue:

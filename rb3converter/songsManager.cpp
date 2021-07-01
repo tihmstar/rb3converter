@@ -153,7 +153,7 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
     
     info("fixing song ids");
     _dta->verifyAndFixSongIDs();
-
+    
     _dta->writeToFile(_ps3Path + "songs/songs.dta");
     
     info("Done processing %llu songs!",conPathsSongNums);
