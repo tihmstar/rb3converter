@@ -9,8 +9,9 @@
 #include <libgeneral/macros.h>
 #include <fcntl.h>
 #include <set>
+#include <algorithm>
 
-#define INTENDATIONCNT 2
+#define INTENDATIONCNT 3
 
 dtaParser::dtaParser(std::string inpath)
 : _nextSongID(1000000141)
@@ -49,6 +50,11 @@ dtaParser::dtaParser(std::string inpath)
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
         if (obj.type != dtaObject::type_empty) {
+            if (obj.keys.size()) {
+                std::string title = obj.keys.at(0);
+                std::transform(title.begin(), title.end(), title.begin(), tolower);
+                obj.keys[0] = title;
+            }
             if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
                 && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
                 ) {
@@ -99,6 +105,11 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
         buf += obj.usedSize;
         bufSize -= obj.usedSize;
         if (obj.type != dtaObject::type_empty) {
+            if (obj.keys.size()) {
+                std::string title = obj.keys.at(0);
+                std::transform(title.begin(), title.end(), title.begin(), tolower);
+                obj.keys[0] = title;
+            }
             if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
                 && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
                 ) {

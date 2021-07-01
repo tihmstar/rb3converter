@@ -67,5 +67,5 @@ void ConvertPNG::convertToPS3(std::string outpath){
         uint16_t *dst = (uint16_t*)&newmem[i];
         *dst = htons(*src);
     }
-    memset(&newmem[_memSize], 0xff, newmemsize-_memSize);
+    memset(&newmem[_memSize], newmem[_memSize-1], newmemsize-_memSize);
 }
