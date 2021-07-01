@@ -123,7 +123,7 @@ const ConvertMogg::ItemPair *ConvertMogg::getItemPairs() const{
 void ConvertMogg::convertToPS3(std::string outpath){
     int nfd = -1;
     uint8_t *newmem = NULL;
-    size_t newmemsize = _memSize+sizeof(enc_ps3_header) + 16;//add AES block for potential padding
+    size_t newmemsize = _memSize+sizeof(enc_ps3_header);
     cleanup([&]{
         if (newmem){
             munmap(newmem, newmemsize);
@@ -195,12 +195,6 @@ void ConvertMogg::convertToPS3(std::string outpath){
     {
         size_t newBodySize = newmemsize - headerSizeNew;
         int len = 0;
-        if (newBodySize % 16 == 0) {
-            newBodySize -= 16; //remove full block that we appended
-        }else{
-            newBodySize &= ~0xf; //we appended full block, now we can cut down a little
-        }
-        assure(newBodySize % 16 == 0);
         for (; len < newBodySize && len < 32; len+=16) {
             uint8_t tmp[16];
             encryptBodyBlock(tmp, &newmem[headerSizeNew+len]);
@@ -209,9 +203,11 @@ void ConvertMogg::convertToPS3(std::string outpath){
         for (; len < newBodySize; len+=16) {
             ssize_t remaining = _memSize-(headerSizeMem+len);
             if (remaining < 16) {
-                char buf[16] = {};
-                memcpy(buf, &_mem[headerSizeMem+len], remaining);
-                encryptBodyBlock(&newmem[headerSizeNew+len], buf);
+                char buf_plain[16] = {};
+                char buf_enc[16] = {};
+                memcpy(buf_plain, &_mem[headerSizeMem+len], remaining);
+                encryptBodyBlock(buf_enc, buf_plain);
+                memcpy(&newmem[headerSizeNew+len], buf_enc, remaining);
             }else{
                 encryptBodyBlock(&newmem[headerSizeNew+len], &_mem[headerSizeMem+len]);
             }

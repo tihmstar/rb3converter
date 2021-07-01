@@ -44,17 +44,21 @@ void ConvertPNG::convertToPS3(std::string outpath){
             close(nfd);
         }
     });
+    size_t newmemsize = _memSize;
+    if (newmemsize % 8) {
+        newmemsize += 8 - (newmemsize % 8);
+    }
     
     assure((nfd = open(outpath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0655)) != -1);
-    assure(lseek(nfd, _memSize-1, SEEK_SET) == _memSize-1);
+    assure(lseek(nfd, newmemsize-1, SEEK_SET) == newmemsize-1);
     {
         uint8_t nullbyte = 0;
         assure(write(nfd, &nullbyte, 1) == 1);
     }
     assure(lseek(nfd, 0, SEEK_SET) == 0);
-    assure((newmem = (uint8_t*)mmap(NULL, _memSize, PROT_READ | PROT_WRITE, MAP_SHARED, nfd, 0)) != (uint8_t*)-1);
+    assure((newmem = (uint8_t*)mmap(NULL, newmemsize, PROT_READ | PROT_WRITE, MAP_SHARED, nfd, 0)) != (uint8_t*)-1);
     
-    assure(_memSize >= 32);
+    assure(newmemsize >= 32);
     
     memcpy(newmem, _mem, 32);
     
@@ -63,4 +67,5 @@ void ConvertPNG::convertToPS3(std::string outpath){
         uint16_t *dst = (uint16_t*)&newmem[i];
         *dst = htons(*src);
     }
+    memset(&newmem[_memSize], 0xff, newmemsize-_memSize);
 }
