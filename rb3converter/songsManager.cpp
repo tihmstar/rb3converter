@@ -14,6 +14,8 @@
 #include "ConvertMogg.hpp"
 #include <queue>
 #include <thread>
+#include <mutex>
+#include <string.h>
 
 inline bool ends_with(std::string const & value, std::string const & ending){
     if (ending.size() > value.size()) return false;

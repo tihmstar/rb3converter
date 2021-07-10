@@ -134,11 +134,7 @@ dtaObject dtaParser::parseElement(const char *buf, size_t size){
     size_t origSize = size;
     const char *origBuf = buf;
     bool isNeg = false;
-    
-    if (origSize == 509) {
-        printf("");
-    }
-    
+        
     while (size > 0) {
         char c = *buf++;size--;
         if (c == ' ' ||
