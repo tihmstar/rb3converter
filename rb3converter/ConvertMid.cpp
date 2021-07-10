@@ -48,9 +48,9 @@ struct EDATData {
 };
 
 uint64_t swapByteOrder64(uint64_t in) {
-#if __has_builtin(__builtin_bswap64)
-    return __builtin_bswap64(in);
-#else
+//#if __has_builtin(__builtin_bswap64)
+//    return __builtin_bswap64(in);
+//#else
     return ((((in) & 0xff00000000000000ull) >> 56)                                      \
       | (((in) & 0x00ff000000000000ull) >> 40)                                      \
       | (((in) & 0x0000ff0000000000ull) >> 24)                                      \
@@ -58,8 +58,8 @@ uint64_t swapByteOrder64(uint64_t in) {
       | (((in) & 0x00000000ff000000ull) << 8)                                      \
       | (((in) & 0x0000000000ff0000ull) << 24)                                      \
       | (((in) & 0x000000000000ff00ull) << 40)                                      \
-      | (((in) & 0x00000000000000ffull) << 56))
-#endif
+      | (((in) & 0x00000000000000ffull) << 56));
+//#endif
 }
 
 uint8_t hexNibbleToInt(char nibble) {
@@ -153,7 +153,7 @@ void apploaderUnencrypted(uint8_t* data, size_t len, uint8_t* hashKey, uint8_t* 
 
 ConvertMid::ConvertMid(std::string inpath, std::string klicpath, std::string rappath, Region region, Edat_type edattype)
 : _loader(nullptr)
-, _mem(NULL), _memSize(NULL)
+, _mem(NULL), _memSize(0)
 , _region(region)
 {
     _loader = new FileLoader(inpath);

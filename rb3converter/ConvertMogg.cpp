@@ -30,7 +30,7 @@ static uint8_t k[16] = {
 
 ConvertMogg::ConvertMogg(std::string inpath)
 : _loader(nullptr)
-, _mem(NULL), _memSize(NULL)
+, _mem(NULL), _memSize(0)
 , _ctx(NULL)
 {
     _loader = new FileLoader(inpath);

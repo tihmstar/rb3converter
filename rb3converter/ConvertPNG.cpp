@@ -14,7 +14,7 @@
 
 ConvertPNG::ConvertPNG(std::string inpath)
 : _loader(nullptr)
-, _mem(NULL), _memSize(NULL)
+, _mem(NULL), _memSize(0)
 {
     _loader = new FileLoader(inpath);
     _mem = _loader->mem();
