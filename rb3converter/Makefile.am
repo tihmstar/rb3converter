@@ -1,6 +1,6 @@
 AM_CFLAGS =  $(GLOBAL_CFLAGS) $(openssl_CFLAGS) $(libgeneral_CFLAGS)
 AM_CXXFLAGS = $(AM_CFLAGS) $(GLOBAL_CXXFLAGS)
-AM_LDFLAGS = $(openssl_LIBS) $(libgeneral_LIBS)
+AM_LDFLAGS = $(openssl_LIBS) $(libgeneral_LIBS) -lpthread
 
 bin_PROGRAMS = rb3converter
 
