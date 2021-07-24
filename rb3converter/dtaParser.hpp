@@ -11,14 +11,21 @@
 #include "FileLoader.hpp"
 #include <vector>
 
+struct dtaNumber{
+    bool isInteger;
+    union {
+        float floatVal;
+        int intVal;
+    };
+};
+
 class dtaObject{
 public:
     std::vector<std::string> keys; //might be non-existant
     std::vector<std::string> keywords;
     enum{
         type_undefined,
-        type_ints,
-        type_floats,
+        type_nums,
         type_str,
         type_keys,
         type_keywords,
@@ -26,8 +33,7 @@ public:
         type_empty,
         type_comment
     } type = type_undefined;
-    std::vector<int> intValues;
-    std::vector<float> floatValues;
+    std::vector<dtaNumber> numValues;
     std::string strValue;
     std::vector<dtaObject> children;
     std::string comment;

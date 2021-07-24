@@ -56,7 +56,7 @@ dtaParser::dtaParser(std::string inpath)
                 obj.keys[0] = title;
             }
             if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
-                && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
+                && obj.numValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
                 ) {
                 //WTF??
                 debug("Unpacking only child!");
@@ -111,7 +111,7 @@ dtaParser::dtaParser(const void *mem, size_t memSize)
                 obj.keys[0] = title;
             }
             if (obj.keys.size() == 0 && obj.children.size() == 1 && obj.type == dtaObject::type_children
-                && obj.intValues.size() == 0 && obj.floatValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
+                && obj.numValues.size() == 0 && obj.strValue.size() == 0 && obj.keywords.size() == 0
                 ) {
                 //WTF??
                 debug("Unpacking only child!");
@@ -200,9 +200,10 @@ dtaObject dtaParser::parseElement(const char *buf, size_t size){
             int intNum = 0;
             float floatNum = 0;
             int decimalPoints = 0;
+            bool isInteger = true;
             while (true) {
                 if (isdigit(c)){
-                    if (ret.type == dtaObject::type_floats) {
+                    if (!isInteger) {
                         if (decimalPoints == 0) {
                             floatNum *= 10;
                             floatNum += c -'0';
@@ -218,24 +219,31 @@ dtaObject dtaParser::parseElement(const char *buf, size_t size){
                     }
                 }else if (c == '.'){
                     //this is a float
-                    assure(ret.type == dtaObject::type_floats || ret.type == dtaObject::type_undefined);
-                    ret.type = dtaObject::type_floats;
+                    assure(ret.type == dtaObject::type_nums || ret.type == dtaObject::type_undefined);
+                    isInteger = false;
                     floatNum = intNum;
                     decimalPoints = 1;
                 }else if (c == ' ' || c == ')'){
                     if (ret.type == dtaObject::type_undefined) {
-                        ret.type = dtaObject::type_ints;
+                        ret.type = dtaObject::type_nums;
                     }
-                    if (ret.type == dtaObject::type_floats) {
+                    if (!isInteger) {
                         if (isNeg) floatNum *= -1;
-                        ret.floatValues.push_back(floatNum);
-                        floatNum = 0;
-                        decimalPoints = 0;
-                    }else if (ret.type == dtaObject::type_ints){
+                        ret.numValues.push_back({
+                            .isInteger = false,
+                            .floatVal = floatNum
+                        });
+                    } else {
                         if (isNeg) intNum *= -1;
-                        ret.intValues.push_back(intNum);
-                        intNum = 0;
+                        ret.numValues.push_back({
+                            .isInteger = true,
+                            .intVal = intNum
+                        });
                     }
+                    floatNum = 0;
+                    decimalPoints = 0;
+                    intNum = 0;
+                    isInteger = true;
                     isNeg = false;
                 }else if (c == '-'){
                     isNeg = true;
@@ -283,7 +291,7 @@ end:
     if (ret.type == dtaObject::type_undefined &&
         ret.keys.size() == 0 &&
         ret.keywords.size() == 0 &&
-        ret.intValues.size() == 0 &&
+        ret.numValues.size() == 0 &&
         ret.strValue.size() == 0 &&
         ret.children.size() == 0 &&
         ret.comment.size() == 0) {
@@ -297,8 +305,8 @@ end:
         ret.keywords.clear();
 
         ret.keys.push_back("song_id");
-        ret.type = dtaObject::type_ints;
-        if (ret.intValues.size() == 0 && ret.strValue.size() == 0) {
+        ret.type = dtaObject::type_nums;
+        if (ret.numValues.size() == 0 && ret.strValue.size() == 0) {
             ret.strValue = "id_fixme";
         }
     }
@@ -329,8 +337,13 @@ std::string dtaParser::getSongIDForSong(uint32_t songnum){
         }
         
         if (key == "song_id") {
-            if (child.intValues.size()) {
-                return std::to_string(child.intValues.at(0));
+            if (child.numValues.size()) {
+                auto &val = child.numValues.at(0);
+                if (val.isInteger) {
+                    return std::to_string(val.intVal);
+                }else{
+                    reterror("song_id shouldn't be a float!");
+                }
             }else if (child.strValue.size()){
                 return child.strValue;
             }else{
@@ -415,7 +428,8 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
             ret += getWriteDataIntended(")", 1, intendlevel, noending);
         }
             break;
-        case dtaObject::type_ints:
+
+        case dtaObject::type_nums:
         {
             std::string w{'('};
             if (obj.keys.size() == 1) {
@@ -426,28 +440,16 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
                 retassure(obj.keywords.size() == 1, "todo");
                 w += obj.keywords.at(0);
             }
-                            
-            for (auto v : obj.intValues) {
+            
+            for (auto v : obj.numValues) {
                 if (w.size() > 1) w += ' ';
-                w += std::to_string(v);
-            }
-            w += ')';
-            ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
-        }
-            break;
-        case dtaObject::type_floats:
-        {
-            std::string w{'('};
-            if (obj.keys.size() == 1) {
-                w += '\'' + obj.keys.at(0) + '\'';
-            }else if (obj.keys.size() != 0){
-                reterror("todo");
-            }
-            for (auto v : obj.floatValues) {
-                if (w.size() > 1) w += ' ';
-                char buf[0x100];
-                snprintf(buf, sizeof(buf), "%.2f",v);
-                w += buf;
+                if (v.isInteger) {
+                    w += std::to_string(v.intVal);
+                }else{
+                    char buf[0x100];
+                    snprintf(buf, sizeof(buf), "%.2f",v.floatVal);
+                    w += buf;
+                }
             }
             w += ')';
             ret += getWriteDataIntended(w.data(), w.size(), intendlevel, noending);
@@ -510,10 +512,27 @@ void dtaParser::verifyAndFixSongIDs(){
             }else if (child.keywords.size()){
                 key = child.keywords.at(0);
             }
+            if (key == "rating"){
+                if (child.numValues.size() == 1) {
+                    auto rating = child.numValues.at(0);
+                    retassure(rating.isInteger, "rating is float");
+                    if (rating.intVal > 2) {
+                        child.numValues.clear();
+                        child.numValues.push_back({
+                            .isInteger = true,
+                            .intVal = 2
+                        });
+                        debug("Setting rating to '2'");
+                    }
+                }
+            }
+            
             if (key == "song_id") {
                 std::string curID;
-                if (child.intValues.size()) {
-                    curID = std::to_string(child.intValues.at(0));
+                if (child.numValues.size()) {
+                    auto &v = child.numValues.at(0);
+                    retassure(v.isInteger, "song_id is a float");
+                    curID = std::to_string(v.intVal);
                 }else if (child.strValue.size()){
                     curID = child.strValue;
                 }else{
@@ -544,8 +563,11 @@ void dtaParser::verifyAndFixSongIDs(){
                     } while (songIDs.find(std::to_string(newID)) != songIDs.end());
                     warning("Replacing '%s' with '%u'",curID.c_str(),newID);
                     child.strValue.clear(); //make sure we don't have it as string
-                    child.intValues.clear(); //make sure we don't have other numbers
-                    child.intValues.push_back(newID);
+                    child.numValues.clear(); //make sure we don't have other numbers
+                    child.numValues.push_back({
+                        .isInteger = true,
+                        .intVal = (int)newID
+                    });
                     songIDs.insert(std::to_string(newID));
                 }
                 goto doContinue;
