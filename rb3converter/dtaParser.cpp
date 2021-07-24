@@ -588,7 +588,7 @@ void dtaParser::writeSongToFile(std::string outfile, uint32_t songnum){
     });
     dtaObject &song = _roots.at(songnum);
     
-    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0, "failed to create file '%s'",outfile.c_str());
+    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0, "failed to create file '%s'",outfile.c_str());
     std::string w = getWriteObjData(song, 0);
     write(fd, w.data(), w.size());
 }
@@ -601,7 +601,7 @@ void dtaParser::writeToFile(std::string outfile){
         safeClose(fd);
     });
     
-    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755)) > 0, "failed to create file '%s'",outfile.c_str());
+    retassure((fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) > 0, "failed to create file '%s'",outfile.c_str());
     
     for (dtaObject &song : _roots) {
         std::string w = getWriteObjData(song, 0);

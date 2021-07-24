@@ -49,7 +49,7 @@ void ConvertPNG::convertToPS3(std::string outpath){
         newmemsize += 8 - (newmemsize % 8);
     }
     
-    assure((nfd = open(outpath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0655)) != -1);
+    assure((nfd = open(outpath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644)) != -1);
     assure(lseek(nfd, newmemsize-1, SEEK_SET) == newmemsize-1);
     {
         uint8_t nullbyte = 0;
