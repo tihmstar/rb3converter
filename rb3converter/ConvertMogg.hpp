@@ -12,6 +12,7 @@
 #include <vector>
 #include <openssl/evp.h>
 
+
 class ConvertMogg  {
 public:
     enum CryptVersion{
@@ -38,8 +39,8 @@ private:
 
     std::vector<uint8_t> _streamP;
     
-    void encryptBodyBlock(const void *dst, const void *src);
-    
+    void setupPS3EncryptKey();
+    void encryptBodyBlock(void *dst, const void *src);
 public:
     ConvertMogg(std::string inpath);
     ConvertMogg(const void *mem, size_t memSize);

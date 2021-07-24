@@ -38,11 +38,7 @@ ConvertMogg::ConvertMogg(std::string inpath)
     _memSize = _loader->size();
 
     assure(_ctx = EVP_CIPHER_CTX_new());
-    assure(EVP_EncryptInit_ex(_ctx, EVP_aes_128_ecb(), NULL, k, NULL) == 1);
-
-    for (int i=0; i<16; i++) {
-        _streamP.push_back(enc_ps3_header[i]);
-    }
+    setupPS3EncryptKey();
 }
 
 ConvertMogg::ConvertMogg(const void *mem, size_t memSize)
@@ -51,11 +47,7 @@ ConvertMogg::ConvertMogg(const void *mem, size_t memSize)
 , _ctx(NULL)
 {
     assure(_ctx = EVP_CIPHER_CTX_new());
-    assure(EVP_EncryptInit_ex(_ctx, EVP_aes_128_ecb(), NULL, k, NULL) == 1);
-
-    for (int i=0; i<16; i++) {
-        _streamP.push_back(enc_ps3_header[i]);
-    }
+    setupPS3EncryptKey();
 }
 
 ConvertMogg::~ConvertMogg(){
@@ -63,9 +55,25 @@ ConvertMogg::~ConvertMogg(){
     safeDelete(_loader);
 }
 
-void ConvertMogg::encryptBodyBlock(const void *dst, const void *src){
+void ConvertMogg::setupPS3EncryptKey(){
+    assure(EVP_EncryptInit_ex(_ctx, EVP_aes_128_ecb(), NULL, k, NULL) == 1);
+    _streamP.clear();
+    for (int i=0; i<16; i++) {
+        _streamP.push_back(enc_ps3_header[i]);
+    }
+}
+
+void ConvertMogg::encryptBodyBlock(void *dst, const void *src){
+    uint8_t copy[0x10];
     int outl = 0;
     uint32_t *encnum = (uint32_t*)_streamP.data();
+    {
+        int64_t diff = (uint8_t*)dst - (uint8_t*)src;
+        if (abs(diff) < 0x10) {
+            memcpy(copy, src, 0x10);
+            src = copy;
+        }
+    }
     assure(EVP_EncryptUpdate(_ctx, (unsigned char*)dst, &outl, (unsigned char*)_streamP.data(), 16) == 1);
     (*encnum)++;
     if (((uint64_t)src & 0xf) == 0 && ((uint64_t)dst & 0xf) == 0){
@@ -124,62 +132,139 @@ void ConvertMogg::convertToPS3(std::string outpath){
     int nfd = -1;
     uint8_t *newmem = NULL;
     size_t newmemsize = _memSize+sizeof(enc_ps3_header);
+    size_t newmemsize_mapped = newmemsize;
     cleanup([&]{
         if (newmem){
-            munmap(newmem, newmemsize);
+            munmap(newmem, newmemsize_mapped);
             newmem = NULL;
         }
-        if (nfd != -1) {
-            close(nfd);
+        if (nfd != -1 && newmemsize < newmemsize_mapped) {
+            ftruncate(nfd, newmemsize);
         }
+        safeClose(nfd);
     });
     const uint8_t *base = NULL;
     size_t baseSize = 0;
     size_t headerSizeMem = 0;
     size_t headerSizeNew = 0;
+    bool isEncrypted = false;
+    
+    const uint8_t *srcmem = _mem;
+    size_t srcmemSize = _memSize;
+
 
     assure((nfd = open(outpath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0655)) != -1);
-    assure(lseek(nfd, newmemsize-1, SEEK_SET) == newmemsize-1);
+    assure(lseek(nfd, newmemsize-1, SEEK_SET) == newmemsize_mapped-1);
     {
         uint8_t nullbyte = 0;
         assure(write(nfd, &nullbyte, 1) == 1);
     }
     assure(lseek(nfd, 0, SEEK_SET) == 0);
-    assure((newmem = (uint8_t*)mmap(NULL, newmemsize, PROT_READ | PROT_WRITE, MAP_SHARED, nfd, 0)) != (uint8_t*)-1);
+    assure((newmem = (uint8_t*)mmap(NULL, newmemsize_mapped, PROT_READ | PROT_WRITE, MAP_SHARED, nfd, 0)) != (uint8_t*)-1);
     
     base = (const uint8_t *)(getItemPairs()+itemPairCnt());
     if (cryptversion() != ConvertMogg::CryptVersion::x0A) {
-        base += (cryptversion() == ConvertMogg::CryptVersion::x0B) ? 16 : 72;
+        uint32_t count = (cryptversion() == ConvertMogg::CryptVersion::x0B) ? 16 : 72;
+        uint32_t num = *(uint32_t*)&srcmem[0x10];
+        std::vector<uint8_t> key{&srcmem[0x14 + num*8],&srcmem[0x18 + num*8]+count};
+        std::vector<uint8_t> kkk;
+        
+        if (cryptversion() == CryptVersion::x0C) {
+            char hard_key[] = "\x2d\x68\x64\x6c\x94\x73\x17\x47\x97\x3d\x64\xdf\x89\x17\x63\x8b";
+            kkk = {hard_key,hard_key+sizeof(hard_key)-1};
+        }else if (cryptversion() == CryptVersion::x0D){
+            char hard_key[] = "\xc0\x87\x69\x00\xe2\x7c\x73\xeb\xcc\xd4\x21\x3d\x70\x2a\x4f\xed";
+            kkk = {hard_key,hard_key+sizeof(hard_key)-1};
+        }else{
+            reterror("unknown encryption 0x%x",cryptversion());
+        }
+
+        assure(EVP_EncryptInit_ex(_ctx, EVP_aes_128_ecb(), NULL, kkk.data(), NULL) == 1);
+        _streamP = key;
+        _streamP.resize(16);
+        
+        isEncrypted = true;
     }
     
-    headerSizeNew = headerSizeMem = (base-_mem);
-    baseSize = _memSize - headerSizeMem;
-    assure(baseSize && baseSize < _memSize);//overflow check
+    headerSizeNew = headerSizeMem = (base-srcmem);
+    baseSize = srcmemSize - headerSizeMem;
+    assure(baseSize && baseSize < srcmemSize);//overflow check
     
-    memcpy(newmem, _mem, headerSizeMem);
+    memcpy(newmem, srcmem, headerSizeMem);
 
     //fixup encryption type
     ((uint32_t*)newmem)[0] = CryptVersion::x0D;
 
-    //fixup body size
-    ((uint32_t*)newmem)[1] +=sizeof(enc_ps3_header);
+    if (!isEncrypted) {
+        //fixup body size
+        ((uint32_t*)newmem)[1] += sizeof(enc_ps3_header);
+    }else{
+        newmemsize -= sizeof(enc_ps3_header);;
+    }
     
     //copy over enc_ps3_header
     memcpy(&newmem[headerSizeNew], enc_ps3_header, sizeof(enc_ps3_header));
     headerSizeNew +=sizeof(enc_ps3_header);
-    
-    //copy over first 4 blocks
-    memcpy(&newmem[headerSizeNew], &_mem[headerSizeMem], 32);
+    if (isEncrypted) {
+        headerSizeMem +=sizeof(enc_ps3_header);
+    }
 
+    //copy over first 4 blocks
+    memcpy(&newmem[headerSizeNew], &srcmem[headerSizeMem], 32);
+    
+    if (isEncrypted) {
+        uint8_t *dst = &newmem[headerSizeNew];
+        const uint8_t *src = &srcmem[headerSizeMem];
+        
+        while (src+0x10 <= &srcmem[srcmemSize]) {
+            encryptBodyBlock(dst,src);
+            dst += 0x10;
+            src += 0x10;
+        }
+        if (src < &srcmem[srcmemSize]) {
+            size_t remainder = &srcmem[srcmemSize] - src;
+            uint8_t block[0x10] = {};
+            memcpy(block, src, remainder);
+            encryptBodyBlock(block,block);
+            memcpy(dst, block, remainder);
+        }
+        
+        srcmem = newmem;
+        srcmemSize = newmemsize;
+        
+        if (cryptversion() == CryptVersion::x0D) {
+            retassure(*(uint32_t*)&newmem[headerSizeMem] == 'AXMH', "AXMH signature not found");
+            //something obfuscated!?
+            uint32_t num1 = htonl(*(uint32_t*)&srcmem[headerSizeMem + 12]);
+            uint32_t num2 = htonl(*(uint32_t*)&srcmem[headerSizeMem + 20]);
+            uint32_t num3 = *(uint32_t*)&_streamP.data()[24];
+
+            uint32_t num4 = (num3 ^ 0x36363636) * 0x19660d + 0x3c6ef35f;
+
+            uint32_t num5 = *(uint32_t*)&_streamP.data()[16];
+            uint32_t num6 = (num5 ^ 0x5C5C5C5C) * 0x19660d + 0x3c6ef35f;
+
+            num6 = num6 * 0x19660d + 0x3c6ef35f;
+            num6 ^= num1;
+            num4 ^= num2;
+
+            *(uint32_t*)&newmem[headerSizeNew + 0] = 'SggO';
+            *(uint32_t*)&newmem[headerSizeNew + 12/*0xc*/] = htonl(num6);
+            *(uint32_t*)&newmem[headerSizeNew + 20/*0x14*/] = htonl(num4);
+        }
+        setupPS3EncryptKey();
+    }
+
+    retassure(*(uint32_t*)&newmem[headerSizeNew] == 'SggO', "OggS signature not found");
     
     {
         //something obfuscated!?
-        uint32_t num1 = htonl(*(uint32_t*)&_mem[headerSizeMem + 12]);
-        uint32_t num2 = htonl(*(uint32_t*)&_mem[headerSizeMem + 20]);
+        uint32_t num1 = htonl(*(uint32_t*)&srcmem[headerSizeMem + 12]);
+        uint32_t num2 = htonl(*(uint32_t*)&srcmem[headerSizeMem + 20]);
         uint32_t num3 = *(uint32_t*)&enc_ps3_header[24];
 
         uint32_t num4 = (num3 ^ 0x36363636) * 0x19660d + 0x3c6ef35f;
-        
+
         uint32_t num5 = *(uint32_t*)&enc_ps3_header[16];
         uint32_t num6 = (num5 ^ 0x5C5C5C5C) * 0x19660d + 0x3c6ef35f;
 
@@ -188,8 +273,8 @@ void ConvertMogg::convertToPS3(std::string outpath){
         num4 ^= num2;
 
         *(uint32_t*)&newmem[headerSizeNew + 0] = 'AXMH';
-        *(uint32_t*)&newmem[headerSizeNew + 12] = htonl(num6);
-        *(uint32_t*)&newmem[headerSizeNew + 20] = htonl(num4);
+        *(uint32_t*)&newmem[headerSizeNew + 12/*0xc*/] = htonl(num6);
+        *(uint32_t*)&newmem[headerSizeNew + 20/*0x14*/] = htonl(num4);
     }
 
     {
@@ -201,15 +286,15 @@ void ConvertMogg::convertToPS3(std::string outpath){
             memcpy(&newmem[headerSizeNew+len], tmp, 16);
         }
         for (; len < newBodySize; len+=16) {
-            ssize_t remaining = _memSize-(headerSizeMem+len);
+            ssize_t remaining = srcmemSize-(headerSizeMem+len);
             if (remaining < 16) {
                 char buf_plain[16] = {};
                 char buf_enc[16] = {};
-                memcpy(buf_plain, &_mem[headerSizeMem+len], remaining);
+                memcpy(buf_plain, &srcmem[headerSizeMem+len], remaining);
                 encryptBodyBlock(buf_enc, buf_plain);
                 memcpy(&newmem[headerSizeNew+len], buf_enc, remaining);
             }else{
-                encryptBodyBlock(&newmem[headerSizeNew+len], &_mem[headerSizeMem+len]);
+                encryptBodyBlock(&newmem[headerSizeNew+len], &srcmem[headerSizeMem+len]);
             }
         }
     }
