@@ -386,7 +386,7 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
             retassure(obj.children.size(), "needs children");
 
             {
-                std::string kw{'('};
+                std::string kw;
                 bool noChildrenEnding = obj.children.size() == 1 && obj.children.at(0).type != dtaObject::type_children;
                 bool hasKey = false;
                 if (obj.keys.size() == 1) {
@@ -400,9 +400,11 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
                 }else if (obj.keys.size() != 0){
                     reterror("todo");
                 }
-
-                ret += getWriteDataIntended(kw.data(), kw.size(), intendlevel, noChildrenEnding, doIntend);
+                ret += getWriteDataIntended("(", 1, intendlevel, noChildrenEnding, doIntend);
                 int childIntend = intendlevel + (hasKey ? INTENDATIONCNT : 1);
+                if (kw.size()) {
+                    ret += getWriteDataIntended(kw.data(), kw.size(), childIntend, noChildrenEnding, !noChildrenEnding);
+                }
                 for (auto child : obj.children){
                     ret += getWriteObjData(child, childIntend, noChildrenEnding, !noChildrenEnding);
                     hasKey = true;
@@ -491,32 +493,68 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
     }
 
     
+//    {
+//        auto isValidChar = [](char c)->bool{
+//            if (isalnum(c)) return true;
+//            switch (c) {
+//                case ' ':
+//                case '(':
+//                case ')':
+//                case '/':
+//                case '_':
+//                case '-':
+//                case '.':
+//                case ',':
+//                case '"':
+//                case ';':
+//                case ':':
+//                case '&':
+//                case '\r':
+//                case '\n':
+//                case '\'':
+//                    return true;
+//
+//                default:
+//                    return false;
+//            }
+//        };
+//
+//        size_t b1 = 0;
+//        size_t b2 = 0;
+//        for (int i=0; i < ret.size(); i++){
+//            char *buf = (char*)ret.c_str();
+//            char c = buf[i];
+//            if (c == '(') b1++;
+//            else if (c == ')') b2++;
+//            if (!isValidChar(c)) {
+//                if ((uint8_t)buf[i] == 0xc3 && (uint8_t)buf[i+1] == 0x9f){
+//                    /*
+//                        Replace german 'sz' -> ss
+//                     */
+//                    c = buf[i] = 's';
+//                    buf[i+1] = 's';
+//                    continue;
+//                }
+//
+//                if ((uint8_t)buf[i] > 0x7f || buf[i] == '!' || buf[i] == '#'){
+//                    buf[i] = 'T';
+//                    continue;
+//                }
+//
+//                for (int j=i; j>=0; j--) {
+//                    if (buf[j] == '\n') break;
+//                    if (buf[j] == ';') goto ignore;
+//                }
+//                reterror("Invalid char '%c' found in buf='%s'",c,ret.c_str());
+//            ignore:
+////                debug("ignoring invalid char '%c' in buf='%s'",c,ret.c_str());
+//                continue;
+//            }
+//        }
+//        retassure(b2 <= b1, "dta sanity check failed");
+//    }
+    
     {
-        auto isValidChar = [](char c)->bool{
-            if (isalnum(c)) return true;
-            switch (c) {
-                case ' ':
-                case '(':
-                case ')':
-                case '/':
-                case '_':
-                case '-':
-                case '.':
-                case ',':
-                case '"':
-                case ';':
-                case ':':
-                case '&':
-                case '\r':
-                case '\n':
-                case '\'':
-                    return true;
-                    
-                default:
-                    return false;
-            }
-        };
-        
         size_t b1 = 0;
         size_t b2 = 0;
         for (int i=0; i < ret.size(); i++){
@@ -524,30 +562,6 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
             char c = buf[i];
             if (c == '(') b1++;
             else if (c == ')') b2++;
-            if (!isValidChar(c)) {
-                if ((uint8_t)buf[i] == 0xc3 && (uint8_t)buf[i+1] == 0x9f){
-                    /*
-                        Replace german 'sz' -> ss
-                     */
-                    c = buf[i] = 's';
-                    buf[i+1] = 's';
-                    continue;
-                }
-                
-                if ((uint8_t)buf[i] > 0x7f || buf[i] == '!' || buf[i] == '#'){
-                    buf[i] = 'T';
-                    continue;
-                }
-                
-                for (int j=i; j>=0; j--) {
-                    if (buf[j] == '\n') break;
-                    if (buf[j] == ';') goto ignore;
-                }
-                reterror("Invalid char '%c' found in buf='%s'",c,ret.c_str());
-            ignore:
-//                debug("ignoring invalid char '%c' in buf='%s'",c,ret.c_str());
-                continue;
-            }
         }
         retassure(b2 <= b1, "dta sanity check failed");
     }
