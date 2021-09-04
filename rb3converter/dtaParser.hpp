@@ -46,8 +46,8 @@ class dtaParser{
     
     dtaObject parseElement(const char *buf, size_t size);
     
-    std::string getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noending);
-    std::string getWriteObjData(const dtaObject &obj, int intendlevel, bool noending = false);
+    std::string getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noEnding = false, bool doIntend = true);
+    std::string getWriteObjData(const dtaObject &obj, int intendlevel, bool noending = false, bool doIntend = true);
         
 public:
     dtaParser(std::string inpath);

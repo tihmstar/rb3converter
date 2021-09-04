@@ -87,7 +87,7 @@ void songsManager::convertCONtoPS3(std::string klicpath, std::string rappath, Co
     auto processCon = [&](std::string path){
         STFS con(path);
         auto files = con.listFiles();
-        
+
         for (auto &file : files) {
             if (ends_with(file, ".milo_xbox")) {
                 std::string newfilename = file.substr(0,file.size()-(sizeof(".milo_xbox")-1))+".milo_ps3";
