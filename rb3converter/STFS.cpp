@@ -113,7 +113,11 @@ void STFS::parseFiletable(uint32_t startBlock, uint32_t numBlocks){
                 reterror("Internal error constructing file path");
             }
         found_filename:
-            filename += file->filename;
+            {
+                std::string f = file->filename;
+                if (f.size() > sizeof(file->filename)) f.resize(sizeof(file->filename));
+                filename += f;
+            }
             if (file->type & type_directory) filename += '/';
             
             _files[filename] = file;
