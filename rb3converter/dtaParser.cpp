@@ -359,7 +359,7 @@ std::string dtaParser::getSongIDForSong(uint32_t songnum){
 std::string dtaParser::getWriteDataIntended(const void *buf, size_t bufSize, int intendlevel, bool noEnding, bool doIntend){
     std::string ret;
     if (doIntend){
-        for (int i = 0; i<intendlevel*INTENDATIONCNT; i++){
+        for (int i = 0; i<intendlevel; i++){
             ret += ' ';
         }
     }
@@ -388,19 +388,24 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
             {
                 std::string kw{'('};
                 bool noChildrenEnding = obj.children.size() == 1 && obj.children.at(0).type != dtaObject::type_children;
+                bool hasKey = false;
                 if (obj.keys.size() == 1) {
                     kw += '\'' + obj.keys.at(0) + '\'';
+                    hasKey = true;
                     if (noChildrenEnding) kw += ' ';
                 }else if (obj.keywords.size() == 1){
                     kw += obj.keywords.at(0);
+                    hasKey = true;
                     if (noChildrenEnding) kw += ' ';
                 }else if (obj.keys.size() != 0){
                     reterror("todo");
                 }
 
                 ret += getWriteDataIntended(kw.data(), kw.size(), intendlevel, noChildrenEnding, doIntend);
+                int childIntend = intendlevel + (hasKey ? INTENDATIONCNT : 1);
                 for (auto child : obj.children){
-                    ret += getWriteObjData(child, intendlevel+1, noChildrenEnding, !noChildrenEnding);
+                    ret += getWriteObjData(child, childIntend, noChildrenEnding, !noChildrenEnding);
+                    hasKey = true;
                 }
                 ret += getWriteDataIntended(")", 1, intendlevel, noending, !noChildrenEnding);
             }
@@ -540,7 +545,7 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
                 }
                 reterror("Invalid char '%c' found in buf='%s'",c,ret.c_str());
             ignore:
-                debug("ignoring invalid char '%c' in buf='%s'",c,ret.c_str());
+//                debug("ignoring invalid char '%c' in buf='%s'",c,ret.c_str());
                 continue;
             }
         }
