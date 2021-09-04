@@ -380,21 +380,21 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
                 bool childrenHaveEnding = obj.children.size() != 1;
                 if (obj.keys.size() == 1) {
                     kw += '\'' + obj.keys.at(0) + '\'';
+                    if (!childrenHaveEnding) kw += ' ';
                 }else if (obj.keys.size() != 0){
                     reterror("todo");
                 }
                 ret += getWriteDataIntended(kw.data(), kw.size(), intendlevel, !childrenHaveEnding, doIntend);
                 for (auto child : obj.children){
-                    ret += getWriteObjData(child, intendlevel+1, !childrenHaveEnding, doIntend);
+                    ret += getWriteObjData(child, intendlevel+1, !childrenHaveEnding, childrenHaveEnding);
                 }
-                ret += getWriteDataIntended(")", 1, intendlevel, false, doIntend);
+                ret += getWriteDataIntended(")", 1, intendlevel, noending, childrenHaveEnding);
             }else if (obj.keywords.size() == 1){
                 std::string w;
                 retassure(obj.children.size() >= 1, "todo");
                 if (obj.children.size() == 1 && obj.children.at(0).type != dtaObject::type_children) {
                     std::string kw{'('};
-                    kw += obj.keywords.at(0);
-                    kw += ' ';
+                    kw += obj.keywords.at(0) + ' ';
                     ret += getWriteDataIntended(kw.c_str(), kw.size(), intendlevel, true, doIntend);
                     ret += getWriteObjData(obj.children.at(0), intendlevel+1, true, false);
                     ret += getWriteDataIntended(")", 1, intendlevel, false, false);
