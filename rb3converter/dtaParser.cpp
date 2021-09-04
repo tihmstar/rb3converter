@@ -310,7 +310,7 @@ end:
             ret.strValue = "id_fixme";
         }
     }
-        
+    
     if (ret.type == dtaObject::type_undefined) {
         reterror("parser error");
     }
@@ -375,40 +375,34 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
     switch (obj.type) {
         case dtaObject::type_children:
         {
-            if (obj.keywords.size() == 0) {
+            std::vector<std::string> keys_keywords;
+            if (obj.keywords.size() == 1) {
+                retassure(obj.keys.size() == 0, "can't have keys and keywords??");
+                keys_keywords = obj.keywords;
+            }else if (obj.keys.size() == 1){
+                retassure(obj.keywords.size() ==  0, "can't have keys and keywords??");
+                keys_keywords = obj.keys;
+            }
+            retassure(obj.children.size(), "needs children");
+
+            {
                 std::string kw{'('};
-                bool childrenHaveEnding = obj.children.size() != 1;
+                bool noChildrenEnding = obj.children.size() == 1 && obj.children.at(0).type != dtaObject::type_children;
                 if (obj.keys.size() == 1) {
                     kw += '\'' + obj.keys.at(0) + '\'';
-                    if (!childrenHaveEnding) kw += ' ';
+                    if (noChildrenEnding) kw += ' ';
+                }else if (obj.keywords.size() == 1){
+                    kw += obj.keywords.at(0);
+                    if (noChildrenEnding) kw += ' ';
                 }else if (obj.keys.size() != 0){
                     reterror("todo");
                 }
-                ret += getWriteDataIntended(kw.data(), kw.size(), intendlevel, !childrenHaveEnding, doIntend);
+
+                ret += getWriteDataIntended(kw.data(), kw.size(), intendlevel, noChildrenEnding, doIntend);
                 for (auto child : obj.children){
-                    ret += getWriteObjData(child, intendlevel+1, !childrenHaveEnding, childrenHaveEnding);
+                    ret += getWriteObjData(child, intendlevel+1, noChildrenEnding, !noChildrenEnding);
                 }
-                ret += getWriteDataIntended(")", 1, intendlevel, noending, childrenHaveEnding);
-            }else if (obj.keywords.size() == 1){
-                std::string w;
-                retassure(obj.children.size() >= 1, "todo");
-                if (obj.children.size() == 1 && obj.children.at(0).type != dtaObject::type_children) {
-                    std::string kw{'('};
-                    kw += obj.keywords.at(0) + ' ';
-                    ret += getWriteDataIntended(kw.c_str(), kw.size(), intendlevel, true, doIntend);
-                    ret += getWriteObjData(obj.children.at(0), intendlevel+1, true, false);
-                    ret += getWriteDataIntended(")", 1, intendlevel, false, false);
-                }else{
-                    std::string kw = "(" + obj.keywords.at(0);
-                    ret += getWriteDataIntended(kw.c_str(), kw.size(), intendlevel, noending, doIntend);
-                    bool childrenHaveEnding = obj.children.size() != 1;
-                    for (auto o : obj.children) {
-                        ret += getWriteObjData(o, intendlevel+1, !childrenHaveEnding, doIntend);
-                    }
-                    ret += getWriteDataIntended(")", 1, intendlevel, false, doIntend);
-                }
-            }else{
-                reterror("todo");
+                ret += getWriteDataIntended(")", 1, intendlevel, noending, !noChildrenEnding);
             }
         }
             break;
@@ -491,12 +485,64 @@ std::string dtaParser::getWriteObjData (const dtaObject &obj, int intendlevel, b
             reterror("unexpected type");
     }
 
+    
     {
+        auto isValidChar = [](char c)->bool{
+            if (isalnum(c)) return true;
+            switch (c) {
+                case ' ':
+                case '(':
+                case ')':
+                case '/':
+                case '_':
+                case '-':
+                case '.':
+                case ',':
+                case '"':
+                case ';':
+                case ':':
+                case '&':
+                case '\r':
+                case '\n':
+                case '\'':
+                    return true;
+                    
+                default:
+                    return false;
+            }
+        };
+        
         size_t b1 = 0;
         size_t b2 = 0;
-        for (auto c : ret){
+        for (int i=0; i < ret.size(); i++){
+            char *buf = (char*)ret.c_str();
+            char c = buf[i];
             if (c == '(') b1++;
             else if (c == ')') b2++;
+            if (!isValidChar(c)) {
+                if ((uint8_t)buf[i] == 0xc3 && (uint8_t)buf[i+1] == 0x9f){
+                    /*
+                        Replace german 'sz' -> ss
+                     */
+                    c = buf[i] = 's';
+                    buf[i+1] = 's';
+                    continue;
+                }
+                
+                if ((uint8_t)buf[i] > 0x7f || buf[i] == '!' || buf[i] == '#'){
+                    buf[i] = 'T';
+                    continue;
+                }
+                
+                for (int j=i; j>=0; j--) {
+                    if (buf[j] == '\n') break;
+                    if (buf[j] == ';') goto ignore;
+                }
+                reterror("Invalid char '%c' found in buf='%s'",c,ret.c_str());
+            ignore:
+                debug("ignoring invalid char '%c' in buf='%s'",c,ret.c_str());
+                continue;
+            }
         }
         retassure(b2 <= b1, "dta sanity check failed");
     }
